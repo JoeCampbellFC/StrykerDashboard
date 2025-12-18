@@ -1,5 +1,17 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -145,59 +157,49 @@ export default function DocumentsPage() {
               review the matching files in that date window.
             </p>
           </div>
-          <Link
-            href="/"
-            className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-          >
-            Manage terms
+          <Link href="/">
+            <Button variant="outline">Manage terms</Button>
           </Link>
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Search term
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={selectedTermId ?? ""}
-                  onChange={(e) => onSelectTerm(e.target.value)}
-                  className="h-11 min-w-[240px] rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 shadow-sm transition focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                >
-                  <option value="" disabled>
-                    Choose a saved search term
-                  </option>
-                  {terms.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.term} — {t.category}
+        <Card className="border-slate-200/90 bg-white/90">
+          <CardHeader className="flex flex-col gap-1 border-none px-6 pb-2 pt-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Search term
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Select value={selectedTermId ?? ""} onChange={(e) => onSelectTerm(e.target.value)}>
+                    <option value="" disabled>
+                      Choose a saved search term
                     </option>
-                  ))}
-                </select>
-                {selectedTerm ? (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" /> Ready to explore
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
-                    <span className="h-2 w-2 rounded-full bg-amber-500" /> Pick a term to begin
-                  </span>
-                )}
+                    {terms.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.term} — {t.category}
+                      </option>
+                    ))}
+                  </Select>
+                  {selectedTerm ? (
+                    <Badge variant="success">Ready to explore</Badge>
+                  ) : (
+                    <Badge variant="warning">Pick a term to begin</Badge>
+                  )}
+                </div>
+              </div>
+              <div className="text-right text-sm text-slate-500">
+                <p className="font-semibold uppercase tracking-wide">Last refresh</p>
+                <p className="text-slate-800">{new Date().toLocaleString()}</p>
               </div>
             </div>
-            <div className="text-right text-sm text-slate-500">
-              <p className="font-semibold uppercase tracking-wide">Last refresh</p>
-              <p className="text-slate-800">{new Date().toLocaleString()}</p>
-            </div>
-          </div>
+            {error && (
+              <div className="mt-3 w-full rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {error}
+              </div>
+            )}
+          </CardHeader>
 
-          {error && (
-            <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px]">
+          <CardContent className="grid gap-6 lg:grid-cols-[1fr_280px]">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-slate-700">Mentions by date</h2>
@@ -212,7 +214,7 @@ export default function DocumentsPage() {
                     <button
                       key={bucket.bucket_date}
                       onClick={() => loadDocumentsForDate(bucket.bucket_date, bucket.count)}
-                      className="group relative flex flex-1 items-end justify-center rounded-md bg-gradient-to-t from-slate-800 to-slate-600 text-white shadow transition hover:translate-y-[-2px] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                      className="group relative flex flex-1 items-end justify-center rounded-md bg-gradient-to-t from-slate-900 to-slate-700 text-white shadow transition hover:translate-y-[-2px] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                       style={{ height: `${Math.max((bucket.count / maxCount) * 100, 10)}%` }}
                       title={`${bucket.count} matches on ${formatDate(bucket.bucket_date)}`}
                     >
@@ -234,87 +236,91 @@ export default function DocumentsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">Summary</p>
-              <h3 className="mt-2 text-2xl font-bold">
-                {selectedTerm ? selectedTerm.term : "No term selected"}
-              </h3>
-              <p className="mt-1 text-sm text-slate-200">{selectedTerm?.category ?? "Category TBD"}</p>
-              <div className="mt-6 flex items-center justify-between rounded-lg bg-slate-800/60 px-4 py-3">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-300">Total mentions</p>
-                  <p className="text-3xl font-semibold">{buckets.reduce((sum, b) => sum + b.count, 0)}</p>
+            <Card className="border-slate-800 bg-slate-900 text-white shadow-none">
+              <CardHeader className="gap-2 border-none px-5 pt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">Summary</p>
+                <CardTitle className="text-2xl text-white">
+                  {selectedTerm ? selectedTerm.term : "No term selected"}
+                </CardTitle>
+                <CardDescription className="text-sm text-slate-200">
+                  {selectedTerm?.category ?? "Category TBD"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 px-5 pb-6">
+                <div className="flex items-center justify-between rounded-xl bg-slate-800/70 px-4 py-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-300">Total mentions</p>
+                    <p className="text-3xl font-semibold">
+                      {buckets.reduce((sum, b) => sum + b.count, 0)}
+                    </p>
+                  </div>
+                  <Badge className="bg-emerald-500 text-white hover:bg-emerald-500">Click bars to drill down</Badge>
                 </div>
-                <div className="rounded-full bg-emerald-100/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                  Click bars to drill down
-                </div>
+                <p className="text-sm text-slate-200">
+                  Review the timeline on the left, then select a bar to view the underlying
+                  documents for that date.
+                </p>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/90 bg-white/90">
+          <CardHeader className="border-none pb-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Matching documents
+            </p>
+            <CardTitle className="text-xl text-slate-900">
+              {selectedRange ? `${selectedRange.count} hits on ${selectedRange.label}` : "Pick a date bar to inspect documents"}
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {loadingDocuments && <p className="text-sm text-slate-500">Loading…</p>}
+            {selectedRange && !documents.length && !loadingDocuments && (
+              <p className="text-sm text-slate-600">No documents matched this date.</p>
+            )}
+
+            {documents.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Link</TableHead>
+                      <TableHead>Snippet</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {documents.map((doc) => (
+                      <TableRow key={doc.id}>
+                        <TableCell className="font-semibold text-slate-900">{doc.title}</TableCell>
+                        <TableCell className="text-slate-700">{formatDate(doc.document_date)}</TableCell>
+                        <TableCell className="text-slate-700">{doc.customer}</TableCell>
+                        <TableCell>
+                          <a
+                            href={doc.file_link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 transition hover:decoration-slate-500"
+                          >
+                            Open file
+                          </a>
+                        </TableCell>
+                        <TableCell className="text-slate-700">
+                          {doc.text.slice(0, 160)}
+                          {doc.text.length > 160 ? "…" : ""}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <p className="mt-4 text-sm text-slate-200">
-                Review the timeline on the left, then select a bar to view the underlying
-                documents for that date.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Matching documents
-              </p>
-              <h2 className="text-xl font-semibold text-slate-900">
-                {selectedRange
-                  ? `${selectedRange.count} hits on ${selectedRange.label}`
-                  : "Pick a date bar to inspect documents"}
-              </h2>
-            </div>
-            {loadingDocuments && <span className="text-sm font-medium text-slate-500">Loading…</span>}
-          </div>
-
-          {selectedRange && !documents.length && !loadingDocuments && (
-            <p className="mt-4 text-sm text-slate-600">No documents matched this date.</p>
-          )}
-
-          {documents.length > 0 && (
-            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">Title</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Link</th>
-                    <th className="px-4 py-3">Snippet</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {documents.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-semibold text-slate-900">{doc.title}</td>
-                      <td className="px-4 py-3 text-slate-700">{formatDate(doc.document_date)}</td>
-                      <td className="px-4 py-3 text-slate-700">{doc.customer}</td>
-                      <td className="px-4 py-3">
-                        <a
-                          href={doc.file_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 transition hover:decoration-slate-500"
-                        >
-                          Open file
-                        </a>
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {doc.text.slice(0, 160)}
-                        {doc.text.length > 160 ? "…" : ""}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
