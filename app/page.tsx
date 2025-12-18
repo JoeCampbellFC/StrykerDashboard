@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
@@ -57,37 +59,45 @@ export default function Home() {
   }
 
   return (
-    <main style={{ padding: 32, maxWidth: 900 }}>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Search Terms</h1>
-        <Link
-          href="/documents"
-          className="inline-flex"
-        >
-          <Button>Document insights</Button>
-        </Link>
-      </div>
+    <main className="min-h-screen bg-slate-50 pb-12">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 pt-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Search Terms</h1>
+            <p className="text-sm text-slate-600">Manage search terms that power document insights.</p>
+          </div>
+          <Link href="/documents" className="inline-flex">
+            <Button size="lg">Document insights</Button>
+          </Link>
+        </div>
 
-      <form onSubmit={onSubmit} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <input
-          placeholder="term"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          required
-        />
-        <input
-          placeholder="category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          required
-        />
-        <button disabled={saving} type="submit">
-          {saving ? "Saving..." : "Add"}
-        </button>
-        <button type="button" onClick={() => refresh()} disabled={saving}>
-          Refresh
-        </button>
-      </form>
+        <Card className="border-slate-200/90 bg-white/90">
+          <CardHeader>
+            <CardTitle className="text-lg text-slate-900">Add a search term</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
+              <Input
+                placeholder="Term (e.g. compliance)"
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                required
+              />
+              <Input
+                placeholder="Category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                required
+              />
+              <Button type="submit" disabled={saving} className="md:w-28">
+                {saving ? "Saving..." : "Add"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => refresh()} disabled={saving} className="md:w-28">
+                Refresh
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
       <ul style={{ paddingLeft: 16 }}>
         {terms.map((t) => (
