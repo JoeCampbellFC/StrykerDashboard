@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 type SearchTerm = {
@@ -56,7 +57,15 @@ export default function Home() {
 
   return (
     <main style={{ padding: 32, maxWidth: 900 }}>
-      <h1>Search Terms</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Search Terms</h1>
+        <Link
+          href="/documents"
+          className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+        >
+          Document insights
+        </Link>
+      </div>
 
       <form onSubmit={onSubmit} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <input
@@ -82,8 +91,7 @@ export default function Home() {
       <ul style={{ paddingLeft: 16 }}>
         {terms.map((t) => (
           <li key={t.id} style={{ marginBottom: 8 }}>
-            <strong>{t.term}</strong> ({t.category}) —{" "}
-            {new Date(t.created_date).toLocaleString()}
+            <strong>{t.term}</strong> ({t.category}) — {new Date(t.created_date).toLocaleString()}
             {"  "}
             <button onClick={() => onDelete(t.id)} style={{ marginLeft: 8 }}>
               Delete
