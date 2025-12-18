@@ -99,33 +99,17 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/90 bg-white/90">
-          <CardHeader>
-            <CardTitle className="text-lg text-slate-900">Saved terms</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {terms.length === 0 ? (
-              <p className="text-sm text-slate-600">No terms yet. Add one to begin tracking documents.</p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {terms.map((t) => (
-                  <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">{t.term}</p>
-                      <p className="text-sm text-slate-600">
-                        {t.category} • {new Date(t.created_date).toLocaleString()}
-                      </p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => onDelete(t.id)}>
-                      Delete
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <ul style={{ paddingLeft: 16 }}>
+        {terms.map((t) => (
+          <li key={t.id} style={{ marginBottom: 8 }}>
+            <strong>{t.term}</strong> ({t.category}) — {new Date(t.created_date).toLocaleString()}
+            {"  "}
+            <button onClick={() => onDelete(t.id)} style={{ marginLeft: 8 }}>
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
     </main>
   );
 }
