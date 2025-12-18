@@ -130,102 +130,40 @@ export default function DocumentsPage() {
   );
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "radial-gradient(circle at 20% 20%, #f0f7ff, #fdf6ff 45%, #f9fbff)",
-        padding: "48px 24px 64px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 24,
-        }}
-      >
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
-          <div>
-            <p style={{ color: "#6b7280", margin: 0, fontWeight: 600 }}>Document intelligence</p>
-            <h1
-              style={{
-                fontSize: 32,
-                margin: "6px 0 4px",
-                color: "#0f172a",
-                letterSpacing: -0.5,
-              }}
-            >
+    <main className="min-h-screen bg-slate-50 pb-12">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pt-10">
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Document intelligence
+            </p>
+            <h1 className="text-3xl font-bold text-slate-900">
               Track search terms across uploaded documents
             </h1>
-            <p style={{ color: "#4b5563", maxWidth: 700 }}>
-              Pick a search term to see how often it appears. Click a bar to dive into the
-              matching documents for that day.
+            <p className="max-w-3xl text-base text-slate-600">
+              Select a term to see daily mention volume from the documents table. Click a bar to
+              review the matching files in that date window.
             </p>
           </div>
           <Link
             href="/"
-            style={{
-              padding: "10px 16px",
-              background: "#0ea5e9",
-              color: "white",
-              borderRadius: 9999,
-              textDecoration: "none",
-              boxShadow: "0 8px 24px rgba(14,165,233,0.25)",
-              fontWeight: 600,
-              transition: "transform 160ms ease, box-shadow 160ms ease",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "")}
+            className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
           >
             Manage terms
           </Link>
         </header>
 
-        <section
-          style={{
-            background: "#ffffffcc",
-            backdropFilter: "blur(6px)",
-            border: "1px solid #e5e7eb",
-            borderRadius: 16,
-            padding: 20,
-            boxShadow: "0 15px 60px rgba(15, 23, 42, 0.08)",
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            gap: 16,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 16,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <p style={{ margin: 0, color: "#9ca3af", fontWeight: 600 }}>Search term</p>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <section className="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Search term
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
                 <select
                   value={selectedTermId ?? ""}
                   onChange={(e) => onSelectTerm(e.target.value)}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    border: "1px solid #d1d5db",
-                    minWidth: 240,
-                    fontSize: 15,
-                    boxShadow: "inset 0 1px 2px rgba(0,0,0,0.04)",
-                  }}
+                  className="h-11 min-w-[240px] rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 shadow-sm transition focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 >
                   <option value="" disabled>
                     Choose a saved search term
@@ -237,200 +175,138 @@ export default function DocumentsPage() {
                   ))}
                 </select>
                 {selectedTerm ? (
-                  <span style={{ color: "#10b981", fontWeight: 600 }}>
-                    Ready to explore
+                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" /> Ready to explore
                   </span>
                 ) : (
-                  <span style={{ color: "#f97316", fontWeight: 600 }}>
-                    Pick a term to begin
+                  <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" /> Pick a term to begin
                   </span>
                 )}
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ margin: 0, color: "#9ca3af", fontWeight: 600 }}>Last update</p>
-              <p style={{ margin: 0, color: "#0f172a", fontWeight: 700 }}>
-                {new Date().toLocaleString()}
-              </p>
+            <div className="text-right text-sm text-slate-500">
+              <p className="font-semibold uppercase tracking-wide">Last refresh</p>
+              <p className="text-slate-800">{new Date().toLocaleString()}</p>
             </div>
           </div>
 
           {error && (
-            <div
-              style={{
-                border: "1px solid #fecdd3",
-                background: "#fff1f2",
-                color: "#b91c1c",
-                padding: "10px 12px",
-                borderRadius: 10,
-                fontWeight: 600,
-              }}
-            >
+            <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               {error}
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 18, alignItems: "flex-end", flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 280 }}>
-              <p style={{ margin: "4px 0", color: "#6b7280", fontWeight: 700 }}>Mentions by date</p>
-              <div
-                style={{
-                  height: 280,
-                  display: "flex",
-                  alignItems: "flex-end",
-                  gap: 10,
-                  padding: "12px 12px 0",
-                  background: "linear-gradient(180deg, rgba(14,165,233,0.1), transparent)",
-                  borderRadius: 12,
-                  border: "1px solid #e5e7eb",
-                }}
-              >
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px]">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-700">Mentions by date</h2>
+                {loadingChart && <span className="text-sm font-medium text-slate-500">Loading…</span>}
+              </div>
+
+              <div className="flex h-72 items-end gap-2 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white px-4 pb-4 pt-6 shadow-inner">
                 {loadingChart ? (
-                  <p style={{ margin: "auto", color: "#6b7280" }}>Loading chart…</p>
+                  <div className="mx-auto text-sm font-medium text-slate-500">Preparing chart…</div>
                 ) : buckets.length ? (
                   buckets.map((bucket) => (
                     <button
                       key={bucket.bucket_date}
                       onClick={() => loadDocumentsForDate(bucket.bucket_date, bucket.count)}
-                      style={{
-                        flex: 1,
-                        minWidth: 30,
-                        height: `${Math.max((bucket.count / maxCount) * 100, 8)}%`,
-                        background: "linear-gradient(135deg, #0ea5e9, #6366f1)",
-                        border: "none",
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        boxShadow: "0 10px 25px rgba(14,165,233,0.25)",
-                        position: "relative",
-                        transition: "transform 120ms ease, box-shadow 120ms ease",
-                        color: "white",
-                      }}
+                      className="group relative flex flex-1 items-end justify-center rounded-md bg-gradient-to-t from-slate-800 to-slate-600 text-white shadow transition hover:translate-y-[-2px] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                      style={{ height: `${Math.max((bucket.count / maxCount) * 100, 10)}%` }}
                       title={`${bucket.count} matches on ${formatDate(bucket.bucket_date)}`}
-                      onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-4px)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.transform = "")}
                     >
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: -24,
-                          left: 0,
-                          right: 0,
-                          textAlign: "center",
-                          fontWeight: 700,
-                          color: "#111827",
-                        }}
-                      >
+                      <span className="absolute -top-7 text-xs font-semibold text-slate-800">
                         {bucket.count}
                       </span>
-                      <span
-                        style={{
-                          position: "absolute",
-                          bottom: -32,
-                          left: 0,
-                          right: 0,
-                          textAlign: "center",
-                          fontSize: 12,
-                          color: "#374151",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <span className="absolute -bottom-10 w-full text-center text-[11px] font-medium text-slate-600">
                         {formatDate(bucket.bucket_date)}
                       </span>
                     </button>
                   ))
                 ) : (
-                  <p style={{ margin: "auto", color: "#6b7280", textAlign: "center" }}>
+                  <div className="mx-auto text-center text-sm font-medium text-slate-500">
                     {selectedTerm
                       ? "No matching documents for this term yet"
                       : "Choose a term to see mention volume"}
-                  </p>
+                  </div>
                 )}
               </div>
             </div>
 
-            <div
-              style={{
-                width: 260,
-                background: "linear-gradient(180deg, #0ea5e9, #6366f1)",
-                color: "white",
-                borderRadius: 14,
-                padding: 16,
-                boxShadow: "0 20px 45px rgba(79,70,229,0.35)",
-              }}
-            >
-              <p style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>Highlights</p>
-              <h2 style={{ margin: "4px 0 10px", fontSize: 24 }}>
+            <div className="rounded-xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">Summary</p>
+              <h3 className="mt-2 text-2xl font-bold">
                 {selectedTerm ? selectedTerm.term : "No term selected"}
-              </h2>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: 18 }}>
-                {buckets.reduce((sum, b) => sum + b.count, 0)} mentions total
-              </p>
-              <p style={{ margin: "8px 0 0", opacity: 0.9, fontSize: 14 }}>
-                Click any bar to see which documents mention the term on that day.
+              </h3>
+              <p className="mt-1 text-sm text-slate-200">{selectedTerm?.category ?? "Category TBD"}</p>
+              <div className="mt-6 flex items-center justify-between rounded-lg bg-slate-800/60 px-4 py-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-300">Total mentions</p>
+                  <p className="text-3xl font-semibold">{buckets.reduce((sum, b) => sum + b.count, 0)}</p>
+                </div>
+                <div className="rounded-full bg-emerald-100/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                  Click bars to drill down
+                </div>
+              </div>
+              <p className="mt-4 text-sm text-slate-200">
+                Review the timeline on the left, then select a bar to view the underlying
+                documents for that date.
               </p>
             </div>
           </div>
         </section>
 
-        <section
-          style={{
-            background: "#ffffff",
-            borderRadius: 16,
-            border: "1px solid #e5e7eb",
-            boxShadow: "0 10px 40px rgba(15,23,42,0.08)",
-            padding: 20,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <section className="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p style={{ margin: 0, color: "#9ca3af", fontWeight: 700 }}>Matching documents</p>
-              <h2 style={{ margin: "6px 0", color: "#0f172a" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Matching documents
+              </p>
+              <h2 className="text-xl font-semibold text-slate-900">
                 {selectedRange
                   ? `${selectedRange.count} hits on ${selectedRange.label}`
                   : "Pick a date bar to inspect documents"}
               </h2>
             </div>
-            {loadingDocuments && <span style={{ color: "#6b7280", fontWeight: 600 }}>Loading…</span>}
+            {loadingDocuments && <span className="text-sm font-medium text-slate-500">Loading…</span>}
           </div>
 
           {selectedRange && !documents.length && !loadingDocuments && (
-            <p style={{ color: "#6b7280" }}>No documents matched this date.</p>
+            <p className="mt-4 text-sm text-slate-600">No documents matched this date.</p>
           )}
 
           {documents.length > 0 && (
-            <div style={{ overflowX: "auto", marginTop: 12 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                <thead>
-                  <tr style={{ textAlign: "left", background: "#f9fafb" }}>
-                    <th style={{ padding: "10px", fontWeight: 800, color: "#111827" }}>Title</th>
-                    <th style={{ padding: "10px", fontWeight: 800, color: "#111827" }}>Date</th>
-                    <th style={{ padding: "10px", fontWeight: 800, color: "#111827" }}>Customer</th>
-                    <th style={{ padding: "10px", fontWeight: 800, color: "#111827" }}>Link</th>
-                    <th style={{ padding: "10px", fontWeight: 800, color: "#111827" }}>Snippet</th>
+            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
+              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Title</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Link</th>
+                    <th className="px-4 py-3">Snippet</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {documents.map((doc) => (
-                    <tr key={doc.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "10px", fontWeight: 700, color: "#111827" }}>
-                        {doc.title}
-                      </td>
-                      <td style={{ padding: "10px", color: "#374151" }}>
-                        {formatDate(doc.document_date)}
-                      </td>
-                      <td style={{ padding: "10px", color: "#374151" }}>{doc.customer}</td>
-                      <td style={{ padding: "10px" }}>
+                    <tr key={doc.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 font-semibold text-slate-900">{doc.title}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatDate(doc.document_date)}</td>
+                      <td className="px-4 py-3 text-slate-700">{doc.customer}</td>
+                      <td className="px-4 py-3">
                         <a
                           href={doc.file_link}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ color: "#2563eb", fontWeight: 700 }}
+                          className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 transition hover:decoration-slate-500"
                         >
                           Open file
                         </a>
                       </td>
-                      <td style={{ padding: "10px", color: "#4b5563" }}>
-                        {doc.text.slice(0, 160)}{doc.text.length > 160 ? "…" : ""}
+                      <td className="px-4 py-3 text-slate-700">
+                        {doc.text.slice(0, 160)}
+                        {doc.text.length > 160 ? "…" : ""}
                       </td>
                     </tr>
                   ))}

@@ -57,19 +57,11 @@ export default function Home() {
 
   return (
     <main style={{ padding: 32, maxWidth: 900 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ margin: 0 }}>Search Terms</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Search Terms</h1>
         <Link
           href="/documents"
-          style={{
-            padding: "10px 16px",
-            background: "linear-gradient(135deg, #0ea5e9, #6366f1)",
-            color: "white",
-            borderRadius: 10,
-            textDecoration: "none",
-            boxShadow: "0 10px 25px rgba(79,70,229,0.25)",
-            fontWeight: 700,
-          }}
+          className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
         >
           Document insights
         </Link>
