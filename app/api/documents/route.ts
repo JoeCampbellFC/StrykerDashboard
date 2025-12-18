@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
 type Bucket = {
-  bucket_date: string;
+  bucket_date: string; // YYYY-MM-DD
   count: number;
 };
 
@@ -10,7 +10,7 @@ type DocumentRow = {
   id: number;
   title: string;
   text: string;
-  document_date: string;
+  document_date: string; // YYYY-MM-DD (date-only now)
   customer: string;
   file_link: string;
 };
@@ -18,10 +18,19 @@ type DocumentRow = {
 function normalizeDate(value: string | null) {
   if (!value) return null;
 
-  const parsed = new Date(value);
+  // Accept ONLY date-only inputs to avoid timezone shifts
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  // If you want to be lenient, you can parse other formats,
+  // but do it in UTC and reconstruct a YYYY-MM-DD explicitly:
+  const parsed = new Date(trimmed);
   if (Number.isNaN(parsed.getTime())) return null;
 
-  return parsed.toISOString().slice(0, 10);
+  const y = parsed.getUTCFullYear();
+  const m = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(parsed.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export async function GET(request: Request) {
@@ -45,11 +54,15 @@ export async function GET(request: Request) {
 
   try {
     const bucketsResult = await pool.query<Bucket>(
-      `SELECT DATE(document_date) AS bucket_date, COUNT(*)::int AS count
-       FROM public.documents
-       WHERE text ILIKE $1
-       GROUP BY DATE(document_date)
-       ORDER BY DATE(document_date)`,
+      `
+      SELECT
+        document_date::date::text AS bucket_date,
+        COUNT(*)::int AS count
+      FROM public.documents
+      WHERE text ILIKE $1
+      GROUP BY document_date::date
+      ORDER BY document_date::date
+      `,
       [likeTerm]
     );
 
@@ -57,12 +70,20 @@ export async function GET(request: Request) {
 
     if (startDate && endDate) {
       const docsResult = await pool.query<DocumentRow>(
-        `SELECT id, title, text, document_date, customer, file_link
-         FROM public.documents
-         WHERE text ILIKE $1
-           AND document_date >= $2::date
-           AND document_date < $3::date + interval '1 day'
-         ORDER BY document_date ASC`,
+        `
+        SELECT
+          id,
+          title,
+          text,
+          document_date::date::text AS document_date,
+          customer,
+          file_link
+        FROM public.documents
+        WHERE text ILIKE $1
+          AND document_date::date >= $2::date
+          AND document_date::date <= $3::date
+        ORDER BY document_date::date ASC, id ASC
+        `,
         [likeTerm, startDate, endDate]
       );
 
