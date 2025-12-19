@@ -512,81 +512,78 @@ export default function DocumentsPage() {
                 <div className="text-sm text-muted-foreground">Select a term to load the chart.</div>
               ) : chartData.length ? (
                 <div className="h-[320px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                      onClick={(state: any) => {
-                        // Clicking a bar gives activePayload[0].payload
-                        const p = state?.activePayload?.[0]?.payload as Bucket | undefined;
-                        if (p?.bucket_date) {
-                          loadDocumentsForBucket(p.bucket_date, (p as any).count).catch(console.error);
-                        }
-                      }}
-                    >
-                      <CartesianGrid vertical={false} />
-                      <XAxis
-                        dataKey="label"
-                        tickLine={false}
-                        axisLine={false}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tickLine={false}
-                        axisLine={false}
-                        width={30}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "hsl(var(--muted))" }}
-                        content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null;
-                          const row = payload[0].payload as any;
-                          const title =
-                            chartGranularity === "day"
-                              ? formatDate(row.bucket_date)
-                              : formatBucketLabel(row.bucket_date, chartGranularity);
-                          return (
-                            <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
-                              <div className="font-medium">{title}</div>
-                              <div className="text-muted-foreground">{row.count} mentions</div>
-                              <div className="mt-1 text-muted-foreground">Click to view documents</div>
-                            </div>
-                          );
-                        }}
-                      />
-                      <Bar dataKey="count" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="h-[320px]">
+  <ResponsiveContainer width="100%" height="100%">
+    <BarChart
+      data={chartData}
+      margin={{ top: 10, right: 16, left: 24, bottom: 8 }} // ✅ more room
+      barCategoryGap="20%" // ✅ nicer spacing between categories
+      barGap={2}
+    >
+      <CartesianGrid vertical={false} />
+
+      <XAxis
+        dataKey="label"
+        tickLine={false}
+        axisLine={false}
+        interval="preserveStartEnd"
+        minTickGap={12}
+        tickMargin={8} // ✅ space from axis
+        padding={{ left: 12, right: 12 }} // ✅ space so first/last bars aren't flush
+      />
+
+      <YAxis
+        allowDecimals={false}
+        tickLine={false}
+        axisLine={false}
+        width={44} // ✅ prevents "500" getting cut off
+        tickMargin={6}
+      />
+
+      <Tooltip
+        cursor={false}
+        wrapperStyle={{ outline: "none", zIndex: 50 }}
+        content={({ active, payload }) => {
+          if (!active || !payload?.length) return null;
+          const row = payload[0].payload as any;
+          const title =
+            chartGranularity === "day"
+              ? formatDate(row.bucket_date)
+              : formatBucketLabel(row.bucket_date, chartGranularity);
+
+          return (
+            <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
+              <div className="font-medium">{title}</div>
+              <div className="text-muted-foreground">{row.count} mentions</div>
+              <div className="mt-1 text-muted-foreground">Click to view documents</div>
+            </div>
+          );
+        }}
+      />
+
+      <Bar
+        dataKey="count"
+        radius={[6, 6, 0, 0]}
+        className="cursor-pointer"
+        onClick={(data: any) => {
+          const p = data?.payload as Bucket | undefined;
+          if (p?.bucket_date) {
+            loadDocumentsForBucket(p.bucket_date, (p as any).count).catch(console.error);
+          }
+        }}
+      />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
+
                 </div>
+
               ) : (
                 <div className="text-sm text-muted-foreground">No matching documents for this term yet.</div>
               )}
             </div>
 
-            {/* Keep a compact list underneath (nice on mobile + mirrors your previous UI) */}
-            {!!selectedTerm && !loadingChart && buckets.length > 0 && (
-              <div className="rounded-lg border">
-                <div className="px-4 py-3 text-sm font-medium">Quick select</div>
-                <div className="divide-y">
-                  {buckets.map((b) => (
-                    <button
-                      key={b.bucket_date}
-                      onClick={() => loadDocumentsForBucket(b.bucket_date, b.count)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-muted"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Badge variant="secondary">{b.count}</Badge>
-                        <span className="text-sm">
-                          {formatBucketLabel(b.bucket_date, chartGranularity)}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">View</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </CardContent>
         </Card>
 
