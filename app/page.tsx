@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  IconTrendingUp,
+  IconTrendingDown,
+} from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -376,50 +380,52 @@ export default function DocumentsPage() {
   );
 
   const monthTrend = useMemo(() => {
-    if (!buckets.length) return null;
+  if (!buckets.length) return null;
 
-    const sorted = [...buckets].sort(
-      (a, b) => new Date(a.bucket_date).getTime() - new Date(b.bucket_date).getTime()
-    );
-    const latestDate = new Date(sorted[sorted.length - 1].bucket_date);
-    if (Number.isNaN(latestDate.getTime())) return null;
+  const sorted = [...buckets].sort(
+    (a, b) => new Date(a.bucket_date).getTime() - new Date(b.bucket_date).getTime()
+  );
 
-    const end = latestDate.getTime();
-    const start = new Date(latestDate);
-    start.setDate(start.getDate() - 30);
-    const previousStart = new Date(start);
-    previousStart.setDate(previousStart.getDate() - 30);
+  const latestDate = new Date(sorted[sorted.length - 1].bucket_date);
+  if (Number.isNaN(latestDate.getTime())) return null;
 
-    const currentCount = sorted
-      .filter((b) => {
-        const time = new Date(b.bucket_date).getTime();
-        return time > start.getTime() && time <= end;
-      })
-      .reduce((sum, b) => sum + b.count, 0);
-    const previousCount = sorted
-      .filter((b) => {
-        const time = new Date(b.bucket_date).getTime();
-        return time > previousStart.getTime() && time <= start.getTime();
-      })
-      .reduce((sum, b) => sum + b.count, 0);
+  const end = latestDate.getTime();
+  const start = new Date(latestDate);
+  start.setDate(start.getDate() - 30);
 
-    const delta = currentCount - previousCount;
-    const direction = delta === 0 ? "flat" : delta > 0 ? "up" : "down";
-    const percentChange =
-      previousCount === 0
-        ? currentCount > 0
-          ? 100
-          : 0
-        : Math.round((delta / previousCount) * 100);
+  // total all-time (or at least across all buckets you have loaded)
+  const totalCount = sorted.reduce((sum, b) => sum + b.count, 0);
 
-    return {
-      currentCount,
-      previousCount,
-      delta,
-      direction,
-      percentChange,
-    } as const;
-  }, [buckets]);
+  // added in the last 30 days
+  const addedLast30 = sorted
+    .filter((b) => {
+      const time = new Date(b.bucket_date).getTime();
+      return time > start.getTime() && time <= end;
+    })
+    .reduce((sum, b) => sum + b.count, 0);
+
+  // what the total was BEFORE the last 30 days
+  const baseBefore30 = totalCount - addedLast30;
+
+  const delta = addedLast30; // growth in the last 30 days
+  const direction = delta === 0 ? "flat" : "up";
+
+  const percentChange =
+    baseBefore30 <= 0
+      ? (addedLast30 > 0 ? null : 0) // "New" / "N/A" if there was no base
+      : Math.round((addedLast30 / baseBefore30) * 100);
+
+  console.log({ totalCount, addedLast30, baseBefore30, delta, direction, percentChange });
+
+  return {
+    totalCount,
+    addedLast30,
+    baseBefore30,
+    delta,
+    direction,
+    percentChange,
+  } as const;
+}, [buckets]);
 
   const chartData = useMemo(
     () => {
@@ -509,36 +515,53 @@ export default function DocumentsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Trends</CardDescription>
-              <CardTitle className="text-2xl">
-                {selectedTerm && monthTrend ? (
-                  <span className="flex items-center gap-2">
-                    <span>
-                      {monthTrend.direction === "flat"
-                        ? "0%"
-                        : `${monthTrend.percentChange > 0 ? "+" : ""}${monthTrend.percentChange}%`}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {monthTrend.direction === "up"
-                        ? "▲"
-                        : monthTrend.direction === "down"
-                        ? "▼"
-                        : "—"}
-                    </span>
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              {selectedTerm && monthTrend
-                ? `Past 30 days: ${monthTrend.currentCount} mentions (${monthTrend.previousCount} prior).`
-                : `Number of ${granularityLabel}s that have at least one match.`}
-            </CardContent>
-          </Card>
+  <Card>
+    <CardHeader className="pb-2">
+      <CardDescription>Trends</CardDescription>
+      <CardTitle className="text-2xl">
+        {selectedTerm && monthTrend ? (
+          <span className="flex items-center gap-2">
+            <span>
+              {monthTrend.percentChange === null
+                ? "New"
+                : monthTrend.percentChange === 0
+                ? "0%"
+                : `${monthTrend.percentChange > 0 ? "+" : ""}${monthTrend.percentChange}%`}
+            </span>
+
+            <span className="text-muted-foreground flex items-center">
+              {monthTrend.percentChange === null ||
+              monthTrend.percentChange > 0 ? (
+                <IconTrendingUp
+                  size={16}              // size-4
+                  className="animate-pulse opacity-80"
+                  aria-label="Trending up"
+                />
+              ) : monthTrend.percentChange < 0 ? (
+                <IconTrendingDown
+                  size={16}
+                  className="animate-pulse opacity-80"
+                  aria-label="Trending down"
+                />
+              ) : (
+                "—"
+              )}
+            </span>
+          </span>
+        ) : (
+          "—"
+        )}
+      </CardTitle>
+    </CardHeader>
+
+    <CardContent className="text-xs text-muted-foreground">
+      {selectedTerm && monthTrend
+        ? `Past 30 days: +${monthTrend.addedLast30} (was ${monthTrend.baseBefore30}; now ${monthTrend.totalCount}).`
+        : `Number of ${granularityLabel}s that have at least one match.`}
+    </CardContent>
+  </Card>
+
+
         </div>
 
         {/* Chart + (optional) list */}
