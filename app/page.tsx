@@ -585,9 +585,69 @@ export default function DocumentsPage() {
                 <div className="text-sm text-muted-foreground">Select a term to load the chart.</div>
               ) : chartData.length ? (
                 <div className="h-[320px]">
+  <ResponsiveContainer width="100%" height="100%">
+    <BarChart
+      data={chartData}
+      margin={{ top: 10, right: 16, left: 24, bottom: 8 }} // ✅ more room
+      barCategoryGap="20%" // ✅ nicer spacing between categories
+      barGap={2}
+    >
+      <CartesianGrid vertical={false} />
 
+      <XAxis
+        dataKey="label"
+        tickLine={false}
+        axisLine={false}
+        interval="preserveStartEnd"
+        minTickGap={12}
+        tickMargin={8} // ✅ space from axis
+        padding={{ left: 12, right: 12 }} // ✅ space so first/last bars aren't flush
+      />
 
-                </div>
+      <YAxis
+        allowDecimals={false}
+        tickLine={false}
+        axisLine={false}
+        width={44} // ✅ prevents "500" getting cut off
+        tickMargin={6}
+      />
+
+      <Tooltip
+        cursor={false}
+        wrapperStyle={{ outline: "none", zIndex: 50 }}
+        content={({ active, payload }) => {
+          if (!active || !payload?.length) return null;
+          const row = payload[0].payload as any;
+          const title =
+            chartGranularity === "day"
+              ? formatDate(row.bucket_date)
+              : formatBucketLabel(row.bucket_date, chartGranularity);
+
+          return (
+            <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
+              <div className="font-medium">{title}</div>
+              <div className="text-muted-foreground">{row.count} mentions</div>
+              <div className="mt-1 text-muted-foreground">Click to view documents</div>
+            </div>
+          );
+        }}
+      />
+
+      <Bar
+        dataKey="count"
+        radius={[6, 6, 0, 0]}
+        className="cursor-pointer"
+        onClick={(data: any) => {
+          const p = data?.payload as Bucket | undefined;
+          if (p?.bucket_date) {
+            loadDocumentsForBucket(p.bucket_date, (p as any).count).catch(console.error);
+          }
+        }}
+      />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
+
 
               ) : (
                 <div className="text-sm text-muted-foreground">No matching documents for this term yet.</div>
