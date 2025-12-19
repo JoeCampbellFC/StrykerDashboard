@@ -38,6 +38,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  Line,
 } from "recharts";
 
 type SearchTerm = {
@@ -374,14 +375,65 @@ export default function DocumentsPage() {
     [buckets]
   );
 
-  const daysWithMentions = useMemo(() => buckets.filter((b) => b.count > 0).length, [buckets]);
+  const monthTrend = useMemo(() => {
+    if (!buckets.length) return null;
+
+    const sorted = [...buckets].sort(
+      (a, b) => new Date(a.bucket_date).getTime() - new Date(b.bucket_date).getTime()
+    );
+    const latestDate = new Date(sorted[sorted.length - 1].bucket_date);
+    if (Number.isNaN(latestDate.getTime())) return null;
+
+    const end = latestDate.getTime();
+    const start = new Date(latestDate);
+    start.setDate(start.getDate() - 30);
+    const previousStart = new Date(start);
+    previousStart.setDate(previousStart.getDate() - 30);
+
+    const currentCount = sorted
+      .filter((b) => {
+        const time = new Date(b.bucket_date).getTime();
+        return time > start.getTime() && time <= end;
+      })
+      .reduce((sum, b) => sum + b.count, 0);
+    const previousCount = sorted
+      .filter((b) => {
+        const time = new Date(b.bucket_date).getTime();
+        return time > previousStart.getTime() && time <= start.getTime();
+      })
+      .reduce((sum, b) => sum + b.count, 0);
+
+    const delta = currentCount - previousCount;
+    const direction = delta === 0 ? "flat" : delta > 0 ? "up" : "down";
+    const percentChange =
+      previousCount === 0
+        ? currentCount > 0
+          ? 100
+          : 0
+        : Math.round((delta / previousCount) * 100);
+
+    return {
+      currentCount,
+      previousCount,
+      delta,
+      direction,
+      percentChange,
+    } as const;
+  }, [buckets]);
 
   const chartData = useMemo(
-    () =>
-      buckets.map((b) => ({
-        ...b,
-        label: formatBucketLabel(b.bucket_date, chartGranularity),
-      })),
+    () => {
+      const windowSize = chartGranularity === "day" ? 7 : chartGranularity === "month" ? 3 : 2;
+      return buckets.map((b, index) => {
+        const slice = buckets.slice(Math.max(0, index - windowSize + 1), index + 1);
+        const average = slice.reduce((sum, entry) => sum + entry.count, 0) / slice.length;
+        return {
+          ...b,
+          label: formatBucketLabel(b.bucket_date, chartGranularity),
+          trend: Number.isFinite(average) ? Number(average.toFixed(1)) : 0,
+        };
+      });
+    },
     [buckets, chartGranularity]
   );
 
@@ -459,11 +511,32 @@ export default function DocumentsPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Periods with mentions</CardDescription>
-              <CardTitle className="text-2xl">{selectedTerm ? daysWithMentions : "—"}</CardTitle>
+              <CardDescription>Trends</CardDescription>
+              <CardTitle className="text-2xl">
+                {selectedTerm && monthTrend ? (
+                  <span className="flex items-center gap-2">
+                    <span>
+                      {monthTrend.direction === "flat"
+                        ? "0%"
+                        : `${monthTrend.percentChange > 0 ? "+" : ""}${monthTrend.percentChange}%`}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {monthTrend.direction === "up"
+                        ? "▲"
+                        : monthTrend.direction === "down"
+                        ? "▼"
+                        : "—"}
+                    </span>
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              Number of {granularityLabel}s that have at least one match.
+              {selectedTerm && monthTrend
+                ? `Past 30 days: ${monthTrend.currentCount} mentions (${monthTrend.previousCount} prior).`
+                : `Number of ${granularityLabel}s that have at least one match.`}
             </CardContent>
           </Card>
         </div>
@@ -512,6 +585,7 @@ export default function DocumentsPage() {
                 <div className="text-sm text-muted-foreground">Select a term to load the chart.</div>
               ) : chartData.length ? (
                 <div className="h-[320px]">
+<<<<<<< HEAD
                   <div className="h-[320px]">
   <ResponsiveContainer width="100%" height="100%">
     <BarChart
@@ -576,6 +650,62 @@ export default function DocumentsPage() {
   </ResponsiveContainer>
 </div>
 
+=======
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      onClick={(state: any) => {
+                        // Clicking a bar gives activePayload[0].payload
+                        const p = state?.activePayload?.[0]?.payload as Bucket | undefined;
+                        if (p?.bucket_date) {
+                          loadDocumentsForBucket(p.bucket_date, (p as any).count).catch(console.error);
+                        }
+                      }}
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tickLine={false}
+                        axisLine={false}
+                        width={30}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--muted))" }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const row = payload[0].payload as any;
+                          const title =
+                            chartGranularity === "day"
+                              ? formatDate(row.bucket_date)
+                              : formatBucketLabel(row.bucket_date, chartGranularity);
+                          return (
+                            <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
+                              <div className="font-medium">{title}</div>
+                              <div className="text-muted-foreground">{row.count} mentions</div>
+                              <div className="mt-1 text-muted-foreground">Click to view documents</div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]} />
+                      <Line
+                        type="monotone"
+                        dataKey="trend"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={false}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+>>>>>>> 41f98e170e15370add421f5dc690a7451113c34e
                 </div>
 
               ) : (
