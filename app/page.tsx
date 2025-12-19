@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
 import {
   ResponsiveContainer,
@@ -79,6 +79,16 @@ function formatShortDate(value: string) {
 export default function DocumentsPage() {
   const [terms, setTerms] = useState<SearchTerm[]>([]);
   const [selectedTermId, setSelectedTermId] = useState<string>("");
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
+  const [isManageTermsOpen, setIsManageTermsOpen] = useState(false);
+  const [newTerm, setNewTerm] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTerm, setEditingTerm] = useState("");
+  const [editingCategory, setEditingCategory] = useState("");
+  const [savingTermId, setSavingTermId] = useState<string | null>(null);
+  const [deletingTermId, setDeletingTermId] = useState<string | null>(null);
 
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -100,13 +110,134 @@ export default function DocumentsPage() {
   }, [selectedTermId, terms]);
 
   useEffect(() => {
-    fetch("/api/search-terms", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setTerms(data);
-      })
-      .catch(() => setError("Unable to load search terms"));
+    refreshTerms();
   }, []);
+
+  async function refreshTerms() {
+    setTermsLoading(true);
+    setTermsError(null);
+
+    try {
+      const res = await fetch("/api/search-terms", { cache: "no-store" });
+      if (!res.ok) {
+        setTermsError("Unable to load search terms");
+        return;
+      }
+
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setTerms(data);
+        if (selectedTermId && !data.some((term) => String(term.id) === String(selectedTermId))) {
+          setSelectedTermId("");
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setTermsError("Unable to load search terms");
+    } finally {
+      setTermsLoading(false);
+    }
+  }
+
+  async function createTerm() {
+    const termValue = newTerm.trim();
+    const categoryValue = newCategory.trim();
+    if (!termValue || !categoryValue) {
+      setTermsError("Both term and category are required.");
+      return;
+    }
+
+    setTermsError(null);
+    setSavingTermId("new");
+    try {
+      const res = await fetch("/api/search-terms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ term: termValue, category: categoryValue }),
+      });
+      if (!res.ok) {
+        setTermsError("Unable to create search term.");
+        return;
+      }
+
+      const created = (await res.json()) as SearchTerm;
+      setTerms((prev) => [created, ...prev]);
+      setNewTerm("");
+      setNewCategory("");
+    } catch (e) {
+      console.error(e);
+      setTermsError("Unable to create search term.");
+    } finally {
+      setSavingTermId(null);
+    }
+  }
+
+  function startEditing(term: SearchTerm) {
+    setEditingId(String(term.id));
+    setEditingTerm(term.term);
+    setEditingCategory(term.category);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setEditingTerm("");
+    setEditingCategory("");
+  }
+
+  async function saveEditing(id: string) {
+    const termValue = editingTerm.trim();
+    const categoryValue = editingCategory.trim();
+    if (!termValue || !categoryValue) {
+      setTermsError("Both term and category are required.");
+      return;
+    }
+
+    setTermsError(null);
+    setSavingTermId(id);
+    try {
+      const res = await fetch(`/api/search-terms/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ term: termValue, category: categoryValue }),
+      });
+
+      if (!res.ok) {
+        setTermsError("Unable to update search term.");
+        return;
+      }
+
+      const updated = (await res.json()) as SearchTerm;
+      setTerms((prev) => prev.map((term) => (String(term.id) === id ? updated : term)));
+      cancelEditing();
+    } catch (e) {
+      console.error(e);
+      setTermsError("Unable to update search term.");
+    } finally {
+      setSavingTermId(null);
+    }
+  }
+
+  async function deleteTerm(id: string) {
+    setTermsError(null);
+    setDeletingTermId(id);
+    try {
+      const res = await fetch(`/api/search-terms/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        setTermsError("Unable to delete search term.");
+        return;
+      }
+
+      setTerms((prev) => prev.filter((term) => String(term.id) !== id));
+      if (String(selectedTermId) === id) {
+        setSelectedTermId("");
+      }
+    } catch (e) {
+      console.error(e);
+      setTermsError("Unable to delete search term.");
+    } finally {
+      setDeletingTermId(null);
+    }
+  }
 
   async function loadChart(term: string) {
     setLoadingChart(true);
@@ -226,8 +357,8 @@ export default function DocumentsPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline">
-              <Link href="/">Manage terms</Link>
+            <Button variant="outline" onClick={() => setIsManageTermsOpen(true)}>
+              Manage terms
             </Button>
           </div>
         </div>
@@ -425,6 +556,148 @@ export default function DocumentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {isManageTermsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-4xl space-y-4 rounded-lg bg-background p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">Manage search terms</h2>
+                <p className="text-sm text-muted-foreground">
+                  Add, edit, or remove the terms used to track document mentions.
+                </p>
+              </div>
+              <Button variant="ghost" onClick={() => setIsManageTermsOpen(false)}>
+                Close
+              </Button>
+            </div>
+
+            {termsError && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {termsError}
+              </div>
+            )}
+
+            <div className="space-y-3 rounded-lg border p-4">
+              <div className="text-sm font-medium">Add new term</div>
+              <div className="grid gap-3 md:grid-cols-[2fr_1fr_auto]">
+                <Input
+                  placeholder="Search term"
+                  value={newTerm}
+                  onChange={(event) => setNewTerm(event.target.value)}
+                />
+                <Input
+                  placeholder="Category"
+                  value={newCategory}
+                  onChange={(event) => setNewCategory(event.target.value)}
+                />
+                <Button
+                  onClick={() => createTerm()}
+                  disabled={savingTermId === "new"}
+                  className="md:w-[140px]"
+                >
+                  {savingTermId === "new" ? "Saving..." : "Add term"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Term</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="whitespace-nowrap">Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {termsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-sm text-muted-foreground">
+                        Loading terms...
+                      </TableCell>
+                    </TableRow>
+                  ) : terms.length ? (
+                    terms.map((term) => {
+                      const isEditing = String(term.id) === editingId;
+                      const isSaving = savingTermId === String(term.id);
+                      const isDeleting = deletingTermId === String(term.id);
+                      return (
+                        <TableRow key={term.id}>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={editingTerm}
+                                onChange={(event) => setEditingTerm(event.target.value)}
+                              />
+                            ) : (
+                              <div className="font-medium">{term.term}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={editingCategory}
+                                onChange={(event) => setEditingCategory(event.target.value)}
+                              />
+                            ) : (
+                              <span className="text-sm text-muted-foreground">
+                                {term.category}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                            {formatDate(term.created_date)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => saveEditing(String(term.id))}
+                                    disabled={isSaving}
+                                  >
+                                    {isSaving ? "Saving..." : "Save"}
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => startEditing(term)}>
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => deleteTerm(String(term.id))}
+                                    disabled={isDeleting}
+                                  >
+                                    {isDeleting ? "Deleting..." : "Delete"}
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-sm text-muted-foreground">
+                        No terms yet. Add one to get started.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
