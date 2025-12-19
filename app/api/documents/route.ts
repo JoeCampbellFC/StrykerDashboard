@@ -38,9 +38,17 @@ export async function GET(request: Request) {
   const term = (searchParams.get("term") ?? "").trim();
   const startDate = normalizeDate(searchParams.get("startDate"));
   const endDate = normalizeDate(searchParams.get("endDate"));
+  const granularity = (searchParams.get("granularity") ?? "day").trim();
 
   if (!term) {
     return NextResponse.json({ error: "term is required" }, { status: 400 });
+  }
+
+  if (!["day", "month", "year"].includes(granularity)) {
+    return NextResponse.json(
+      { error: "granularity must be one of: day, month, year" },
+      { status: 400 }
+    );
   }
 
   if ((startDate && !endDate) || (!startDate && endDate)) {
@@ -51,19 +59,51 @@ export async function GET(request: Request) {
   }
 
   const likeTerm = `%${term}%`;
+  const intervalByGranularity: Record<string, string> = {
+    day: "1 day",
+    month: "1 month",
+    year: "1 year",
+  };
+  const seriesInterval = intervalByGranularity[granularity];
 
   try {
     const bucketsResult = await pool.query<Bucket>(
       `
+      WITH matched AS (
+        SELECT document_date::date AS document_date
+        FROM public.documents
+        WHERE text ILIKE $1
+      ),
+      bounds AS (
+        SELECT
+          MIN(document_date) AS min_date,
+          MAX(document_date) AS max_date
+        FROM matched
+      ),
+      series AS (
+        SELECT generate_series(
+          date_trunc($2, min_date::timestamp),
+          date_trunc($2, max_date::timestamp),
+          $3::interval
+        ) AS bucket
+        FROM bounds
+        WHERE min_date IS NOT NULL AND max_date IS NOT NULL
+      ),
+      counts AS (
+        SELECT
+          date_trunc($2, document_date::timestamp) AS bucket,
+          COUNT(*)::int AS count
+        FROM matched
+        GROUP BY date_trunc($2, document_date::timestamp)
+      )
       SELECT
-        document_date::date::text AS bucket_date,
-        COUNT(*)::int AS count
-      FROM public.documents
-      WHERE text ILIKE $1
-      GROUP BY document_date::date
-      ORDER BY document_date::date
+        to_char(series.bucket::date, 'YYYY-MM-DD') AS bucket_date,
+        COALESCE(counts.count, 0) AS count
+      FROM series
+      LEFT JOIN counts ON counts.bucket = series.bucket
+      ORDER BY series.bucket
       `,
-      [likeTerm]
+      [likeTerm, granularity, seriesInterval]
     );
 
     let documents: DocumentRow[] | null = null;
