@@ -5,7 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -24,6 +30,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 
 type SearchTerm = {
   id: string;
@@ -33,7 +48,7 @@ type SearchTerm = {
 };
 
 type Bucket = {
-  bucket_date: string;
+  bucket_date: string; // YYYY-MM-DD
   count: number;
 };
 
@@ -54,9 +69,15 @@ function formatDate(value: string) {
   });
 }
 
+function formatShortDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function DocumentsPage() {
   const [terms, setTerms] = useState<SearchTerm[]>([]);
-
   const [selectedTermId, setSelectedTermId] = useState<string>("");
 
   const [buckets, setBuckets] = useState<Bucket[]>([]);
@@ -74,9 +95,8 @@ export default function DocumentsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const selectedTerm = useMemo(() => {
-    const id = selectedTermId;
-    if (!selectedTermId || !Number.isFinite(id)) return undefined;
-    return terms.find((t) => t.id === id);
+    if (!selectedTermId) return undefined;
+    return terms.find((t) => String(t.id) === String(selectedTermId));
   }, [selectedTermId, terms]);
 
   useEffect(() => {
@@ -113,10 +133,7 @@ export default function DocumentsPage() {
   }
 
   async function loadDocumentsForDate(date: string, count: number) {
-    console.log("Loading documents for date:", date);
-    console.log("Selected term:", selectedTermId);
-    
-    const termValue = terms.find((t) => t.id === selectedTermId)?.term;
+    const termValue = terms.find((t) => String(t.id) === String(selectedTermId))?.term;
     if (!termValue) return;
 
     setLoadingDocuments(true);
@@ -150,11 +167,8 @@ export default function DocumentsPage() {
   }
 
   function onSelectTerm(termId: string) {
-
     setSelectedTermId(termId);
-    console.log("Selected term ID:", termId);
-    //const id = Number(termId);
-    const termValue = terms.find((t) => t.id === termId)?.term;
+    const termValue = terms.find((t) => String(t.id) === String(termId))?.term;
     if (termValue) loadChart(termValue).catch(console.error);
   }
 
@@ -163,125 +177,202 @@ export default function DocumentsPage() {
     [buckets]
   );
 
+  const daysWithMentions = useMemo(() => buckets.filter((b) => b.count > 0).length, [buckets]);
+
+  const chartData = useMemo(
+    () =>
+      buckets.map((b) => ({
+        ...b,
+        label: formatShortDate(b.bucket_date),
+      })),
+    [buckets]
+  );
+
   return (
     <main className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-5xl space-y-6 px-6 py-10">
-        <header className="flex items-center justify-between gap-4">
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-10">
+        {/* Header (dashboard-ish) */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-            <p className="text-sm text-muted-foreground">
-              Pick a term, then select a date to view matching documents.
-            </p>
-          </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+              <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
 
-          <Button asChild variant="outline">
-            <Link href="/">Manage terms</Link>
-          </Button>
-        </header>
+              {/* Search term next to title */}
+              <div className="flex items-center gap-2">
+                <Select value={selectedTermId} onValueChange={onSelectTerm}>
+                  <SelectTrigger className="w-[320px]">
+                    <SelectValue placeholder="Choose a search term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {terms.map((t) => (
+                      <SelectItem key={t.id} value={String(t.id)}>
+                        {t.term}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-        <Card>
-          <CardHeader className="space-y-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div className="space-y-2">
-                <CardTitle className="text-base">Search term</CardTitle>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Select value={selectedTermId} onValueChange={onSelectTerm}>
-                    <SelectTrigger className="w-[280px]">
-                      <SelectValue placeholder="Choose a term" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {terms.map((t) => (
-                        <SelectItem key={t.id} value={String(t.id)}>
-                          {t.term}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                 
-                </div>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{totalMentions}</span>{" "}
-                total mentions
+                {selectedTerm?.category ? (
+                  <Badge variant="secondary" className="hidden sm:inline-flex">
+                    {selectedTerm.category}
+                  </Badge>
+                ) : null}
               </div>
             </div>
 
-            {error && (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+            <p className="text-sm text-muted-foreground">
+              Pick a term, then click a bar to view matching documents for that date.
+            </p>
+          </div>
 
-            {selectedTerm && (
-              <CardDescription>
-                <span className="font-medium text-foreground">{selectedTerm.term}</span>
-                {selectedTerm.category ? (
-                  <>
-                    {" "}
-                    <span className="text-muted-foreground">·</span>{" "}
-                    <span>{selectedTerm.category}</span>
-                  </>
-                ) : null}
-              </CardDescription>
-            )}
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/">Manage terms</Link>
+            </Button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        {/* KPI cards (shadcn dashboard vibe) */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Total mentions</CardDescription>
+              <CardTitle className="text-2xl">{totalMentions}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-muted-foreground">
+              Across all returned dates for the selected term.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Selected term</CardDescription>
+              <CardTitle className="text-xl">
+                {selectedTerm ? selectedTerm.term : "—"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-muted-foreground">
+              {selectedTerm?.category ? `Category: ${selectedTerm.category}` : "Choose a term to begin."}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Days with mentions</CardDescription>
+              <CardTitle className="text-2xl">{selectedTerm ? daysWithMentions : "—"}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-muted-foreground">
+              Number of dates that have at least one match.
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Chart + (optional) list */}
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-base">Mentions by date</CardTitle>
+            <CardDescription>
+              {selectedTerm ? "Click a bar to drill into documents for that day." : "Choose a term to see the trend."}
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
             <Separator />
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium">Mentions by date</h2>
-                {loadingChart && <span className="text-sm text-muted-foreground">Loading…</span>}
-              </div>
-
-              {/* Simple shadcn list instead of custom bar chart */}
-              <div className="rounded-lg border">
-                {loadingChart ? (
-                  <div className="space-y-3 p-4">
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-4 w-3/5" />
-                  </div>
-                ) : buckets.length ? (
-                  <div className="divide-y">
-                    {buckets.map((b) => (
-                      <button
-                        key={b.bucket_date}
-                        onClick={() => loadDocumentsForDate(b.bucket_date, b.count)}
-                        className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-muted"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Badge variant="secondary">{b.count}</Badge>
-                          <span className="text-sm">{formatDate(b.bucket_date)}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">View</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-sm text-muted-foreground">
-                    {selectedTerm
-                      ? "No matching documents for this term yet."
-                      : "Choose a term to see mention volume."}
-                  </div>
-                )}
-              </div>
+            <div className="rounded-lg border p-4">
+              {loadingChart ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-1/3" />
+                  <Skeleton className="h-40 w-full" />
+                </div>
+              ) : !selectedTerm ? (
+                <div className="text-sm text-muted-foreground">Select a term to load the chart.</div>
+              ) : chartData.length ? (
+                <div className="h-[320px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      onClick={(state: any) => {
+                        // Clicking a bar gives activePayload[0].payload
+                        const p = state?.activePayload?.[0]?.payload as Bucket | undefined;
+                        if (p?.bucket_date) loadDocumentsForDate(p.bucket_date, (p as any).count).catch(console.error);
+                      }}
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tickLine={false}
+                        axisLine={false}
+                        width={30}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "hsl(var(--muted))" }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const row = payload[0].payload as any;
+                          return (
+                            <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
+                              <div className="font-medium">{formatDate(row.bucket_date)}</div>
+                              <div className="text-muted-foreground">{row.count} mentions</div>
+                              <div className="mt-1 text-muted-foreground">Click to view documents</div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">No matching documents for this term yet.</div>
+              )}
             </div>
 
-
+            {/* Keep a compact list underneath (nice on mobile + mirrors your previous UI) */}
+            {!!selectedTerm && !loadingChart && buckets.length > 0 && (
+              <div className="rounded-lg border">
+                <div className="px-4 py-3 text-sm font-medium">Quick select</div>
+                <div className="divide-y">
+                  {buckets.map((b) => (
+                    <button
+                      key={b.bucket_date}
+                      onClick={() => loadDocumentsForDate(b.bucket_date, b.count)}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-muted"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary">{b.count}</Badge>
+                        <span className="text-sm">{formatDate(b.bucket_date)}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">View</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Documents table */}
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-base">Matching documents</CardTitle>
             <CardDescription>
               {selectedRange
                 ? `${selectedRange.count} hits on ${selectedRange.label}`
-                : "Select a date to view documents."}
+                : "Select a date from the chart to view documents."}
             </CardDescription>
           </CardHeader>
 
