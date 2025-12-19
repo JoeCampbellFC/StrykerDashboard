@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
-function parseId(params: { id: string }) {
-  const id = Number(params.id);
+function parseId(idParam: string) {
+  const id = Number(idParam);
   return Number.isFinite(id) ? id : null;
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const id = parseId(params);
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idParam } = await params;
+  const id = parseId(idParam);
   if (!id) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const result = await pool.query(
@@ -19,8 +20,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   return NextResponse.json(result.rows[0], { status: 200 });
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const id = parseId(params);
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idParam } = await params;
+  const id = parseId(idParam);
   if (!id) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const body = await request.json();
@@ -43,8 +45,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   return NextResponse.json(result.rows[0], { status: 200 });
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const id = parseId(params);
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idParam } = await params;
+  const id = parseId(idParam);
   if (!id) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const result = await pool.query(
