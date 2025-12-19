@@ -343,11 +343,6 @@ export default function DocumentsPage() {
                   </SelectContent>
                 </Select>
 
-                {selectedTerm?.category ? (
-                  <Badge variant="secondary" className="hidden sm:inline-flex">
-                    {selectedTerm.category}
-                  </Badge>
-                ) : null}
               </div>
             </div>
 
@@ -614,7 +609,7 @@ export default function DocumentsPage() {
                 <TableBody>
                   {termsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-muted-foreground">
                         Loading terms...
                       </TableCell>
                     </TableRow>
@@ -687,7 +682,7 @@ export default function DocumentsPage() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-muted-foreground">
                         No terms yet. Add one to get started.
                       </TableCell>
                     </TableRow>

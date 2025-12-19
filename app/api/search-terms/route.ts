@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import crypto from "crypto";
 
 export async function GET() {
   try {
@@ -22,12 +23,16 @@ export async function POST(request: Request) {
     if (!term || !category) {
       return NextResponse.json({ error: "term and category are required" }, { status: 400 });
     }
+    const termHash = crypto
+    .createHash("sha256")
+    .update(term)
+    .digest("hex");
 
     const result = await pool.query(
-      `INSERT INTO public.search_terms (term, category)
-       VALUES ($1, $2)
+      `INSERT INTO public.search_terms (id,term, category)
+       VALUES ($1, $2, $3)
        RETURNING id, term, category, created_date`,
-      [term, category]
+      [termHash, term,category]
     );
 
     return NextResponse.json(result.rows[0], { status: 201 });
