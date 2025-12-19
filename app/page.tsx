@@ -52,6 +52,8 @@ type Bucket = {
   count: number;
 };
 
+type ChartGranularity = "day" | "month" | "year";
+
 type DocumentRow = {
   id: number;
   title: string;
@@ -76,6 +78,26 @@ function formatShortDate(value: string) {
   });
 }
 
+function formatMonthYear(value: string) {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatYear(value: string) {
+  return new Date(value).toLocaleDateString(undefined, {
+    year: "numeric",
+  });
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function DocumentsPage() {
   const [terms, setTerms] = useState<SearchTerm[]>([]);
   const [selectedTermId, setSelectedTermId] = useState<string>("");
@@ -89,6 +111,8 @@ export default function DocumentsPage() {
   const [editingCategory, setEditingCategory] = useState("");
   const [savingTermId, setSavingTermId] = useState<string | null>(null);
   const [deletingTermId, setDeletingTermId] = useState<string | null>(null);
+
+  const [chartGranularity, setChartGranularity] = useState<ChartGranularity>("day");
 
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -109,9 +133,16 @@ export default function DocumentsPage() {
     return terms.find((t) => String(t.id) === String(selectedTermId));
   }, [selectedTermId, terms]);
 
+  const selectedTermValue = selectedTerm?.term ?? "";
+
   useEffect(() => {
     refreshTerms();
   }, []);
+
+  useEffect(() => {
+    if (!selectedTermValue) return;
+    loadChart(selectedTermValue, chartGranularity).catch(console.error);
+  }, [selectedTermValue, chartGranularity]);
 
   async function refreshTerms() {
     setTermsLoading(true);
@@ -239,7 +270,7 @@ export default function DocumentsPage() {
     }
   }
 
-  async function loadChart(term: string) {
+  async function loadChart(term: string, granularity: ChartGranularity) {
     setLoadingChart(true);
     setError(null);
     setSelectedRange(null);
@@ -247,7 +278,9 @@ export default function DocumentsPage() {
     setBuckets([]);
 
     try {
-      const res = await fetch(`/api/documents?term=${encodeURIComponent(term)}`);
+      const res = await fetch(
+        `/api/documents?term=${encodeURIComponent(term)}&granularity=${granularity}`
+      );
       if (!res.ok) {
         setError("Could not fetch document trends");
         return;
@@ -263,23 +296,58 @@ export default function DocumentsPage() {
     }
   }
 
-  async function loadDocumentsForDate(date: string, count: number) {
-    const termValue = terms.find((t) => String(t.id) === String(selectedTermId))?.term;
-    if (!termValue) return;
-
-    setLoadingDocuments(true);
-    setError(null);
-    setSelectedRange({
+  function getBucketRange(date: string, granularity: ChartGranularity) {
+    const baseDate = new Date(`${date}T00:00:00`);
+    if (granularity === "month") {
+      const start = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+      const end = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+      return {
+        startDate: formatDateKey(start),
+        endDate: formatDateKey(end),
+        label: formatMonthYear(date),
+      };
+    }
+    if (granularity === "year") {
+      const start = new Date(baseDate.getFullYear(), 0, 1);
+      const end = new Date(baseDate.getFullYear(), 11, 31);
+      return {
+        startDate: formatDateKey(start),
+        endDate: formatDateKey(end),
+        label: formatYear(date),
+      };
+    }
+    return {
       startDate: date,
       endDate: date,
       label: formatDate(date),
+    };
+  }
+
+  function formatBucketLabel(date: string, granularity: ChartGranularity) {
+    if (granularity === "month") return formatMonthYear(date);
+    if (granularity === "year") return formatYear(date);
+    return formatShortDate(date);
+  }
+
+  async function loadDocumentsForBucket(date: string, count: number) {
+    if (!selectedTermValue) return;
+
+    const range = getBucketRange(date, chartGranularity);
+    setLoadingDocuments(true);
+    setError(null);
+    setSelectedRange({
+      startDate: range.startDate,
+      endDate: range.endDate,
+      label: range.label,
       count,
     });
     setDocuments([]);
 
     try {
       const res = await fetch(
-        `/api/documents?term=${encodeURIComponent(termValue)}&startDate=${date}&endDate=${date}`
+        `/api/documents?term=${encodeURIComponent(
+          selectedTermValue
+        )}&startDate=${range.startDate}&endDate=${range.endDate}&granularity=${chartGranularity}`
       );
 
       if (!res.ok) {
@@ -299,8 +367,6 @@ export default function DocumentsPage() {
 
   function onSelectTerm(termId: string) {
     setSelectedTermId(termId);
-    const termValue = terms.find((t) => String(t.id) === String(termId))?.term;
-    if (termValue) loadChart(termValue).catch(console.error);
   }
 
   const totalMentions = useMemo(
@@ -314,10 +380,13 @@ export default function DocumentsPage() {
     () =>
       buckets.map((b) => ({
         ...b,
-        label: formatShortDate(b.bucket_date),
+        label: formatBucketLabel(b.bucket_date, chartGranularity),
       })),
-    [buckets]
+    [buckets, chartGranularity]
   );
+
+  const granularityLabel =
+    chartGranularity === "day" ? "day" : chartGranularity === "month" ? "month" : "year";
 
   return (
     <main className="min-h-screen bg-background">
@@ -347,7 +416,7 @@ export default function DocumentsPage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Pick a term, then click a bar to view matching documents for that date.
+              Pick a term, then click a bar to view matching documents for that {granularityLabel}.
             </p>
           </div>
 
@@ -390,22 +459,44 @@ export default function DocumentsPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Days with mentions</CardDescription>
+              <CardDescription>Periods with mentions</CardDescription>
               <CardTitle className="text-2xl">{selectedTerm ? daysWithMentions : "—"}</CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              Number of dates that have at least one match.
+              Number of {granularityLabel}s that have at least one match.
             </CardContent>
           </Card>
         </div>
 
         {/* Chart + (optional) list */}
         <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-base">Mentions by date</CardTitle>
-            <CardDescription>
-              {selectedTerm ? "Click a bar to drill into documents for that day." : "Choose a term to see the trend."}
-            </CardDescription>
+          <CardHeader className="space-y-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <CardTitle className="text-base">Mentions by {granularityLabel}</CardTitle>
+                <CardDescription>
+                  {selectedTerm
+                    ? `Click a bar to drill into documents for that ${granularityLabel}.`
+                    : "Choose a term to see the trend."}
+                </CardDescription>
+              </div>
+              <div className="inline-flex items-center gap-1 rounded-md border bg-muted/30 p-1">
+                {([
+                  { value: "day", label: "Day" },
+                  { value: "month", label: "Month" },
+                  { value: "year", label: "Year" },
+                ] as const).map((option) => (
+                  <Button
+                    key={option.value}
+                    size="sm"
+                    variant={chartGranularity === option.value ? "secondary" : "ghost"}
+                    onClick={() => setChartGranularity(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -428,7 +519,9 @@ export default function DocumentsPage() {
                       onClick={(state: any) => {
                         // Clicking a bar gives activePayload[0].payload
                         const p = state?.activePayload?.[0]?.payload as Bucket | undefined;
-                        if (p?.bucket_date) loadDocumentsForDate(p.bucket_date, (p as any).count).catch(console.error);
+                        if (p?.bucket_date) {
+                          loadDocumentsForBucket(p.bucket_date, (p as any).count).catch(console.error);
+                        }
                       }}
                     >
                       <CartesianGrid vertical={false} />
@@ -449,9 +542,13 @@ export default function DocumentsPage() {
                         content={({ active, payload }) => {
                           if (!active || !payload?.length) return null;
                           const row = payload[0].payload as any;
+                          const title =
+                            chartGranularity === "day"
+                              ? formatDate(row.bucket_date)
+                              : formatBucketLabel(row.bucket_date, chartGranularity);
                           return (
                             <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
-                              <div className="font-medium">{formatDate(row.bucket_date)}</div>
+                              <div className="font-medium">{title}</div>
                               <div className="text-muted-foreground">{row.count} mentions</div>
                               <div className="mt-1 text-muted-foreground">Click to view documents</div>
                             </div>
@@ -475,12 +572,14 @@ export default function DocumentsPage() {
                   {buckets.map((b) => (
                     <button
                       key={b.bucket_date}
-                      onClick={() => loadDocumentsForDate(b.bucket_date, b.count)}
+                      onClick={() => loadDocumentsForBucket(b.bucket_date, b.count)}
                       className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-muted"
                     >
                       <div className="flex items-center gap-3">
                         <Badge variant="secondary">{b.count}</Badge>
-                        <span className="text-sm">{formatDate(b.bucket_date)}</span>
+                        <span className="text-sm">
+                          {formatBucketLabel(b.bucket_date, chartGranularity)}
+                        </span>
                       </div>
                       <span className="text-xs text-muted-foreground">View</span>
                     </button>
@@ -497,15 +596,17 @@ export default function DocumentsPage() {
             <CardTitle className="text-base">Matching documents</CardTitle>
             <CardDescription>
               {selectedRange
-                ? `${selectedRange.count} hits on ${selectedRange.label}`
-                : "Select a date from the chart to view documents."}
+                ? `${selectedRange.count} hits in ${selectedRange.label}`
+                : "Select a bar from the chart to view documents."}
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-3">
             {loadingDocuments && <p className="text-sm text-muted-foreground">Loading…</p>}
             {selectedRange && !documents.length && !loadingDocuments && (
-              <p className="text-sm text-muted-foreground">No documents matched this date.</p>
+              <p className="text-sm text-muted-foreground">
+                No documents matched this {granularityLabel}.
+              </p>
             )}
 
             {documents.length > 0 && (
