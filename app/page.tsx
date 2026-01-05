@@ -1,12 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  IconTrendingUp,
-  IconTrendingDown,
-} from "@tabler/icons-react";
-
-import { Badge } from "@/components/ui/badge";
+import { IconTrendingUp, IconTrendingDown } from "@tabler/icons-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,13 +38,11 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Line,
 } from "recharts";
 
 type SearchTerm = {
   id: string;
   term: string;
-  category: string;
   created_date: string;
 };
 
@@ -108,16 +102,16 @@ export default function DocumentsPage() {
   const [selectedTermId, setSelectedTermId] = useState<string>("");
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+
   const [isManageTermsOpen, setIsManageTermsOpen] = useState(false);
   const [newTerm, setNewTerm] = useState("");
-  const [newCategory, setNewCategory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTerm, setEditingTerm] = useState("");
-  const [editingCategory, setEditingCategory] = useState("");
   const [savingTermId, setSavingTermId] = useState<string | null>(null);
   const [deletingTermId, setDeletingTermId] = useState<string | null>(null);
 
-  const [chartGranularity, setChartGranularity] = useState<ChartGranularity>("day");
+  const [chartGranularity, setChartGranularity] =
+    useState<ChartGranularity>("day");
 
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -142,6 +136,7 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     refreshTerms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -163,7 +158,10 @@ export default function DocumentsPage() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setTerms(data);
-        if (selectedTermId && !data.some((term) => String(term.id) === String(selectedTermId))) {
+        if (
+          selectedTermId &&
+          !data.some((term) => String(term.id) === String(selectedTermId))
+        ) {
           setSelectedTermId("");
         }
       }
@@ -177,9 +175,8 @@ export default function DocumentsPage() {
 
   async function createTerm() {
     const termValue = newTerm.trim();
-    const categoryValue = newCategory.trim();
-    if (!termValue || !categoryValue) {
-      setTermsError("Both term and category are required.");
+    if (!termValue) {
+      setTermsError("Search term is required.");
       return;
     }
 
@@ -189,7 +186,7 @@ export default function DocumentsPage() {
       const res = await fetch("/api/search-terms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term: termValue, category: categoryValue }),
+        body: JSON.stringify({ term: termValue }),
       });
       if (!res.ok) {
         setTermsError("Unable to create search term.");
@@ -199,7 +196,6 @@ export default function DocumentsPage() {
       const created = (await res.json()) as SearchTerm;
       setTerms((prev) => [created, ...prev]);
       setNewTerm("");
-      setNewCategory("");
     } catch (e) {
       console.error(e);
       setTermsError("Unable to create search term.");
@@ -211,20 +207,17 @@ export default function DocumentsPage() {
   function startEditing(term: SearchTerm) {
     setEditingId(String(term.id));
     setEditingTerm(term.term);
-    setEditingCategory(term.category);
   }
 
   function cancelEditing() {
     setEditingId(null);
     setEditingTerm("");
-    setEditingCategory("");
   }
 
   async function saveEditing(id: string) {
     const termValue = editingTerm.trim();
-    const categoryValue = editingCategory.trim();
-    if (!termValue || !categoryValue) {
-      setTermsError("Both term and category are required.");
+    if (!termValue) {
+      setTermsError("Search term is required.");
       return;
     }
 
@@ -234,7 +227,7 @@ export default function DocumentsPage() {
       const res = await fetch(`/api/search-terms/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term: termValue, category: categoryValue }),
+        body: JSON.stringify({ term: termValue }),
       });
 
       if (!res.ok) {
@@ -243,7 +236,9 @@ export default function DocumentsPage() {
       }
 
       const updated = (await res.json()) as SearchTerm;
-      setTerms((prev) => prev.map((term) => (String(term.id) === id ? updated : term)));
+      setTerms((prev) =>
+        prev.map((term) => (String(term.id) === id ? updated : term))
+      );
       cancelEditing();
     } catch (e) {
       console.error(e);
@@ -284,7 +279,9 @@ export default function DocumentsPage() {
 
     try {
       const res = await fetch(
-        `/api/documents?term=${encodeURIComponent(term)}&granularity=${granularity}`
+        `/api/documents?term=${encodeURIComponent(
+          term
+        )}&granularity=${granularity}`
       );
       if (!res.ok) {
         setError("Could not fetch document trends");
@@ -352,7 +349,9 @@ export default function DocumentsPage() {
       const res = await fetch(
         `/api/documents?term=${encodeURIComponent(
           selectedTermValue
-        )}&startDate=${range.startDate}&endDate=${range.endDate}&granularity=${chartGranularity}`
+        )}&startDate=${range.startDate}&endDate=${
+          range.endDate
+        }&granularity=${chartGranularity}`
       );
 
       if (!res.ok) {
@@ -380,118 +379,133 @@ export default function DocumentsPage() {
   );
 
   const monthTrend = useMemo(() => {
-  if (!buckets.length) return null;
+    if (!buckets.length) return null;
 
-  const sorted = [...buckets].sort(
-    (a, b) => new Date(a.bucket_date).getTime() - new Date(b.bucket_date).getTime()
-  );
+    const sorted = [...buckets].sort(
+      (a, b) =>
+        new Date(a.bucket_date).getTime() - new Date(b.bucket_date).getTime()
+    );
 
-  const latestDate = new Date(sorted[sorted.length - 1].bucket_date);
-  if (Number.isNaN(latestDate.getTime())) return null;
+    const latestDate = new Date(sorted[sorted.length - 1].bucket_date);
+    if (Number.isNaN(latestDate.getTime())) return null;
 
-  const end = latestDate.getTime();
-  const start = new Date(latestDate);
-  start.setDate(start.getDate() - 30);
+    const end = latestDate.getTime();
+    const start = new Date(latestDate);
+    start.setDate(start.getDate() - 30);
 
-  // total all-time (or at least across all buckets you have loaded)
-  const totalCount = sorted.reduce((sum, b) => sum + b.count, 0);
+    const totalCount = sorted.reduce((sum, b) => sum + b.count, 0);
 
-  // added in the last 30 days
-  const addedLast30 = sorted
-    .filter((b) => {
-      const time = new Date(b.bucket_date).getTime();
-      return time > start.getTime() && time <= end;
-    })
-    .reduce((sum, b) => sum + b.count, 0);
+    const addedLast30 = sorted
+      .filter((b) => {
+        const time = new Date(b.bucket_date).getTime();
+        return time > start.getTime() && time <= end;
+      })
+      .reduce((sum, b) => sum + b.count, 0);
 
-  // what the total was BEFORE the last 30 days
-  const baseBefore30 = totalCount - addedLast30;
+    const baseBefore30 = totalCount - addedLast30;
 
-  const delta = addedLast30; // growth in the last 30 days
-  const direction = delta === 0 ? "flat" : "up";
+    const percentChange =
+      baseBefore30 <= 0
+        ? addedLast30 > 0
+          ? null
+          : 0
+        : Math.round((addedLast30 / baseBefore30) * 100);
 
-  const percentChange =
-    baseBefore30 <= 0
-      ? (addedLast30 > 0 ? null : 0) // "New" / "N/A" if there was no base
-      : Math.round((addedLast30 / baseBefore30) * 100);
+    return {
+      totalCount,
+      addedLast30,
+      baseBefore30,
+      percentChange,
+    } as const;
+  }, [buckets]);
 
-  console.log({ totalCount, addedLast30, baseBefore30, delta, direction, percentChange });
+  const chartData = useMemo(() => {
+    const windowSize =
+      chartGranularity === "day" ? 7 : chartGranularity === "month" ? 3 : 2;
 
-  return {
-    totalCount,
-    addedLast30,
-    baseBefore30,
-    delta,
-    direction,
-    percentChange,
-  } as const;
-}, [buckets]);
+    return buckets.map((b, index) => {
+      const slice = buckets.slice(
+        Math.max(0, index - windowSize + 1),
+        index + 1
+      );
+      const average =
+        slice.reduce((sum, entry) => sum + entry.count, 0) / slice.length;
 
-  const chartData = useMemo(
-    () => {
-      const windowSize = chartGranularity === "day" ? 7 : chartGranularity === "month" ? 3 : 2;
-      return buckets.map((b, index) => {
-        const slice = buckets.slice(Math.max(0, index - windowSize + 1), index + 1);
-        const average = slice.reduce((sum, entry) => sum + entry.count, 0) / slice.length;
-        return {
-          ...b,
-          label: formatBucketLabel(b.bucket_date, chartGranularity),
-          trend: Number.isFinite(average) ? Number(average.toFixed(1)) : 0,
-        };
-      });
-    },
-    [buckets, chartGranularity]
-  );
+      return {
+        ...b,
+        label: formatBucketLabel(b.bucket_date, chartGranularity),
+        trend: Number.isFinite(average) ? Number(average.toFixed(1)) : 0,
+      };
+    });
+  }, [buckets, chartGranularity]);
 
   const granularityLabel =
-    chartGranularity === "day" ? "day" : chartGranularity === "month" ? "month" : "year";
+    chartGranularity === "day"
+      ? "day"
+      : chartGranularity === "month"
+      ? "month"
+      : "year";
 
   return (
+
+    
     <main className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-10">
-        {/* Header (dashboard-ish) */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-              <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+      {/* Shadcn-style header */}
+    <header className="sticky top-0 z-40 w-full border-b-1 border-[#ffb500] bg-background">
 
-              {/* Search term next to title */}
-              <div className="flex items-center gap-2">
-                <Select value={selectedTermId} onValueChange={onSelectTerm}>
-                  <SelectTrigger className="w-[320px]">
-                    <SelectValue placeholder="Choose a search term" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {terms.map((t) => (
-                      <SelectItem key={t.id} value={String(t.id)}>
-                        {t.term}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+  <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-6 py-3">
 
-              </div>
-            </div>
+    {/* Logo + Title */}
+    <div className="flex items-center gap-3">
+      <Image
+        src="/stryker-logo.png"
+        alt="Stryker logo"
+        width={128}
+        height={128}
+        className="shrink-0"
+      />
 
-            <p className="text-sm text-muted-foreground">
-              Pick a term, then click a bar to view matching documents for that {granularityLabel}.
-            </p>
-          </div>
+      <div className="flex min-w-0 flex-col">
+        <span className="text-sm font-semibold leading-tight">
+          Document Intelligence
+        </span>
+        <span className="text-xs text-muted-foreground">
+          Turn document mentions into actionable insights
+        </span>
+      </div>
+    </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsManageTermsOpen(true)}>
-              Manage terms
-            </Button>
-          </div>
-        </div>
+    {/* Right side actions */}
+    <div className="ml-auto flex w-full max-w-[520px] items-center gap-2">
+      <Select value={selectedTermId} onValueChange={onSelectTerm}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Choose a search term" />
+        </SelectTrigger>
+        <SelectContent>
+          {terms.map((t) => (
+            <SelectItem key={t.id} value={String(t.id)}>
+              {t.term}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
+      <Button variant="outline" onClick={() => setIsManageTermsOpen(true)}>
+        Manage terms
+      </Button>
+    </div>
+  </div>
+</header>
+
+
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
         {error && (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        {/* KPI cards (shadcn dashboard vibe) */}
+        {/* KPI cards */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
@@ -511,71 +525,74 @@ export default function DocumentsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              {selectedTerm?.category ? `Category: ${selectedTerm.category}` : "Choose a term to begin."}
+              {selectedTerm ? "Current selection." : "Choose a term to begin."}
             </CardContent>
           </Card>
 
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription>Trends</CardDescription>
-      <CardTitle className="text-2xl">
-        {selectedTerm && monthTrend ? (
-          <span className="flex items-center gap-2">
-            <span>
-              {monthTrend.percentChange === null
-                ? "New"
-                : monthTrend.percentChange === 0
-                ? "0%"
-                : `${monthTrend.percentChange > 0 ? "+" : ""}${monthTrend.percentChange}%`}
-            </span>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Trends</CardDescription>
+              <CardTitle className="text-2xl">
+                {selectedTerm && monthTrend ? (
+                  <span className="flex items-center gap-2">
+                    <span>
+                      {monthTrend.percentChange === null
+                        ? "New"
+                        : monthTrend.percentChange === 0
+                        ? "0%"
+                        : `${monthTrend.percentChange > 0 ? "+" : ""}${
+                            monthTrend.percentChange
+                          }%`}
+                    </span>
 
-            <span className="text-muted-foreground flex items-center">
-              {monthTrend.percentChange === null ||
-              monthTrend.percentChange > 0 ? (
-                <IconTrendingUp
-                  size={16}              // size-4
-                  className="animate-pulse opacity-80"
-                  aria-label="Trending up"
-                />
-              ) : monthTrend.percentChange < 0 ? (
-                <IconTrendingDown
-                  size={16}
-                  className="animate-pulse opacity-80"
-                  aria-label="Trending down"
-                />
-              ) : (
-                "—"
-              )}
-            </span>
-          </span>
-        ) : (
-          "—"
-        )}
-      </CardTitle>
-    </CardHeader>
+                    <span className="text-muted-foreground flex items-center">
+                      {monthTrend.percentChange === null ||
+                      monthTrend.percentChange > 0 ? (
+                        <IconTrendingUp
+                          size={16}
+                          className="animate-pulse opacity-80"
+                          aria-label="Trending up"
+                        />
+                      ) : monthTrend.percentChange < 0 ? (
+                        <IconTrendingDown
+                          size={16}
+                          className="animate-pulse opacity-80"
+                          aria-label="Trending down"
+                        />
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </CardTitle>
+            </CardHeader>
 
-    <CardContent className="text-xs text-muted-foreground">
-      {selectedTerm && monthTrend
-        ? `Past 30 days: +${monthTrend.addedLast30} (was ${monthTrend.baseBefore30}; now ${monthTrend.totalCount}).`
-        : `Number of ${granularityLabel}s that have at least one match.`}
-    </CardContent>
-  </Card>
-
-
+            <CardContent className="text-xs text-muted-foreground">
+              {selectedTerm && monthTrend
+                ? `Past 30 days: +${monthTrend.addedLast30} (was ${monthTrend.baseBefore30}; now ${monthTrend.totalCount}).`
+                : `Number of ${granularityLabel}s that have at least one match.`}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Chart + (optional) list */}
+        {/* Chart */}
         <Card>
           <CardHeader className="space-y-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <CardTitle className="text-base">Mentions by {granularityLabel}</CardTitle>
+                <CardTitle className="text-base">
+                  Mentions by {granularityLabel}
+                </CardTitle>
                 <CardDescription>
                   {selectedTerm
                     ? `Click a bar to drill into documents for that ${granularityLabel}.`
                     : "Choose a term to see the trend."}
                 </CardDescription>
               </div>
+
               <div className="inline-flex items-center gap-1 rounded-md border bg-muted/30 p-1">
                 {([
                   { value: "day", label: "Day" },
@@ -585,7 +602,9 @@ export default function DocumentsPage() {
                   <Button
                     key={option.value}
                     size="sm"
-                    variant={chartGranularity === option.value ? "secondary" : "ghost"}
+                    variant={
+                      chartGranularity === option.value ? "secondary" : "ghost"
+                    }
                     onClick={() => setChartGranularity(option.value)}
                   >
                     {option.label}
@@ -605,79 +624,85 @@ export default function DocumentsPage() {
                   <Skeleton className="h-40 w-full" />
                 </div>
               ) : !selectedTerm ? (
-                <div className="text-sm text-muted-foreground">Select a term to load the chart.</div>
+                <div className="text-sm text-muted-foreground">
+                  Select a term to load the chart.
+                </div>
               ) : chartData.length ? (
                 <div className="h-[320px]">
-  <ResponsiveContainer width="100%" height="100%">
-    <BarChart
-      data={chartData}
-      margin={{ top: 10, right: 16, left: 24, bottom: 8 }} // ✅ more room
-      barCategoryGap="20%" // ✅ nicer spacing between categories
-      barGap={2}
-    >
-      <CartesianGrid vertical={false} />
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 10, right: 16, left: 24, bottom: 8 }}
+                      barCategoryGap="20%"
+                      barGap={2}
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                        minTickGap={12}
+                        tickMargin={8}
+                        padding={{ left: 12, right: 12 }}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tickLine={false}
+                        axisLine={false}
+                        width={44}
+                        tickMargin={6}
+                      />
+                      <Tooltip
+                        cursor={false}
+                        wrapperStyle={{ outline: "none", zIndex: 50 }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const row = payload[0].payload as any;
+                          const title =
+                            chartGranularity === "day"
+                              ? formatDate(row.bucket_date)
+                              : formatBucketLabel(
+                                  row.bucket_date,
+                                  chartGranularity
+                                );
 
-      <XAxis
-        dataKey="label"
-        tickLine={false}
-        axisLine={false}
-        interval="preserveStartEnd"
-        minTickGap={12}
-        tickMargin={8} // ✅ space from axis
-        padding={{ left: 12, right: 12 }} // ✅ space so first/last bars aren't flush
-      />
-
-      <YAxis
-        allowDecimals={false}
-        tickLine={false}
-        axisLine={false}
-        width={44} // ✅ prevents "500" getting cut off
-        tickMargin={6}
-      />
-
-      <Tooltip
-        cursor={false}
-        wrapperStyle={{ outline: "none", zIndex: 50 }}
-        content={({ active, payload }) => {
-          if (!active || !payload?.length) return null;
-          const row = payload[0].payload as any;
-          const title =
-            chartGranularity === "day"
-              ? formatDate(row.bucket_date)
-              : formatBucketLabel(row.bucket_date, chartGranularity);
-
-          return (
-            <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
-              <div className="font-medium">{title}</div>
-              <div className="text-muted-foreground">{row.count} mentions</div>
-              <div className="mt-1 text-muted-foreground">Click to view documents</div>
-            </div>
-          );
-        }}
-      />
-
-      <Bar
-        dataKey="count"
-        radius={[6, 6, 0, 0]}
-        className="cursor-pointer"
-        onClick={(data: any) => {
-          const p = data?.payload as Bucket | undefined;
-          if (p?.bucket_date) {
-            loadDocumentsForBucket(p.bucket_date, (p as any).count).catch(console.error);
-          }
-        }}
-      />
-    </BarChart>
-  </ResponsiveContainer>
-</div>
-
-
+                          return (
+                            <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-sm">
+                              <div className="font-medium">{title}</div>
+                              <div className="text-muted-foreground">
+                                {row.count} mentions
+                              </div>
+                              <div className="mt-1 text-muted-foreground">
+                                Click to view documents
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar
+                        dataKey="count"
+                        radius={[6, 6, 0, 0]}
+                        className="cursor-pointer"
+                        onClick={(data: any) => {
+                          const p = data?.payload as Bucket | undefined;
+                          if (p?.bucket_date) {
+                            loadDocumentsForBucket(
+                              p.bucket_date,
+                              (p as any).count
+                            ).catch(console.error);
+                          }
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <div className="text-sm text-muted-foreground">No matching documents for this term yet.</div>
+                <div className="text-sm text-muted-foreground">
+                  No matching documents for this term yet.
+                </div>
               )}
             </div>
-
-
           </CardContent>
         </Card>
 
@@ -693,7 +718,9 @@ export default function DocumentsPage() {
           </CardHeader>
 
           <CardContent className="space-y-3">
-            {loadingDocuments && <p className="text-sm text-muted-foreground">Loading…</p>}
+            {loadingDocuments && (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            )}
             {selectedRange && !documents.length && !loadingDocuments && (
               <p className="text-sm text-muted-foreground">
                 No documents matched this {granularityLabel}.
@@ -744,6 +771,7 @@ export default function DocumentsPage() {
         </Card>
       </div>
 
+      {/* Manage terms modal */}
       {isManageTermsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-4xl space-y-4 rounded-lg bg-background p-6 shadow-xl">
@@ -767,16 +795,11 @@ export default function DocumentsPage() {
 
             <div className="space-y-3 rounded-lg border p-4">
               <div className="text-sm font-medium">Add new term</div>
-              <div className="grid gap-3 md:grid-cols-[2fr_1fr_auto]">
+              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <Input
                   placeholder="Search term"
                   value={newTerm}
                   onChange={(event) => setNewTerm(event.target.value)}
-                />
-                <Input
-                  placeholder="Category"
-                  value={newCategory}
-                  onChange={(event) => setNewCategory(event.target.value)}
                 />
                 <Button
                   onClick={() => createTerm()}
@@ -793,7 +816,6 @@ export default function DocumentsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Term</TableHead>
-                    <TableHead>Category</TableHead>
                     <TableHead className="whitespace-nowrap">Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -810,6 +832,7 @@ export default function DocumentsPage() {
                       const isEditing = String(term.id) === editingId;
                       const isSaving = savingTermId === String(term.id);
                       const isDeleting = deletingTermId === String(term.id);
+
                       return (
                         <TableRow key={term.id}>
                           <TableCell>
@@ -822,21 +845,11 @@ export default function DocumentsPage() {
                               <div className="font-medium">{term.term}</div>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {isEditing ? (
-                              <Input
-                                value={editingCategory}
-                                onChange={(event) => setEditingCategory(event.target.value)}
-                              />
-                            ) : (
-                              <span className="text-sm text-muted-foreground">
-                                {term.category}
-                              </span>
-                            )}
-                          </TableCell>
+
                           <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                             {formatDate(term.created_date)}
                           </TableCell>
+
                           <TableCell>
                             <div className="flex justify-end gap-2">
                               {isEditing ? (
@@ -854,7 +867,11 @@ export default function DocumentsPage() {
                                 </>
                               ) : (
                                 <>
-                                  <Button size="sm" variant="outline" onClick={() => startEditing(term)}>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => startEditing(term)}
+                                  >
                                     Edit
                                   </Button>
                                   <Button
