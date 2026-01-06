@@ -87,12 +87,6 @@ export function TrendChartCard({
                     cursor={{ fill: "rgba(0, 0, 0, 0.04)" }}
                   />
                   <Bar
-                    dataKey="trend"
-                    fill="hsl(var(--muted))"
-                    radius={[6, 6, 0, 0]}
-                    barSize={8}
-                  />
-                  <Bar
                     dataKey="count"
                     radius={[6, 6, 0, 0]}
                     className="cursor-pointer"
