@@ -15,7 +15,7 @@ export async function GET(
   if (!id) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const result = await pool.query(
-    "SELECT id, term, created_date FROM public.search_terms WHERE id = $1",
+    "SELECT id, term, category, created_date FROM public.search_terms WHERE id = $1",
     [id]
   );
 
@@ -34,6 +34,7 @@ export async function PUT(
 
   const body = await request.json();
   const term = String(body?.term ?? "").trim();
+  const category = body?.category ? String(body.category).trim() : null;
 
   if (!term) {
     return NextResponse.json({ error: "term is required" }, { status: 400 });
@@ -41,10 +42,11 @@ export async function PUT(
 
   const result = await pool.query(
     `UPDATE public.search_terms
-     SET term = $1
-     WHERE id = $2
-     RETURNING id, term, created_date`,
-    [term, id]
+     SET term = $1,
+         category = $2
+     WHERE id = $3
+     RETURNING id, term, category, created_date`,
+    [term, category, id]
   );
 
   if (!result.rows.length)

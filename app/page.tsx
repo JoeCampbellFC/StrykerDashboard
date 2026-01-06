@@ -60,8 +60,10 @@ export default function DocumentsPage() {
 
   const [isManageTermsOpen, setIsManageTermsOpen] = useState(false);
   const [newTerm, setNewTerm] = useState("");
+  const [newCategory, setNewCategory] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTerm, setEditingTerm] = useState("");
+  const [editingCategory, setEditingCategory] = useState("");
   const [savingTermId, setSavingTermId] = useState<string | null>(null);
   const [deletingTermId, setDeletingTermId] = useState<string | null>(null);
 
@@ -77,12 +79,48 @@ export default function DocumentsPage() {
 
   const [error, setError] = useState<string | null>(null);
 
-  const selectedTerm = useMemo(() => {
-    if (!selectedTermId) return undefined;
-    return terms.find((t) => String(t.id) === String(selectedTermId));
+  const selectedOption = useMemo(() => {
+    if (!selectedTermId) return null;
+
+    if (selectedTermId.startsWith("category:")) {
+      const categoryName = selectedTermId.replace(/^category:/, "");
+      const categoryTerms = terms.filter(
+        (t) => (t.category ?? "") === categoryName
+      );
+      if (!categoryTerms.length) return null;
+
+      return {
+        type: "category" as const,
+        category: categoryName,
+        terms: categoryTerms,
+      };
+    }
+
+    const term = terms.find((t) => String(t.id) === String(selectedTermId));
+    if (!term) return null;
+
+    return { type: "term" as const, term };
   }, [selectedTermId, terms]);
 
-  const selectedTermValue = selectedTerm?.term ?? "";
+  const selectedTerms = useMemo(() => {
+    if (!selectedOption) return [] as string[];
+
+    if (selectedOption.type === "category") {
+      return selectedOption.terms.map((t) => t.term);
+    }
+
+    return [selectedOption.term.term];
+  }, [selectedOption]);
+
+  const selectedLabel = useMemo(() => {
+    if (!selectedOption) return "";
+
+    return selectedOption.type === "category"
+      ? `Category: ${selectedOption.category}`
+      : selectedOption.term.term;
+  }, [selectedOption]);
+
+  const hasSelection = Boolean(selectedOption);
 
   useEffect(() => {
     refreshTerms();
@@ -90,9 +128,9 @@ export default function DocumentsPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedTermValue) return;
-    loadChart(selectedTermValue, chartGranularity).catch(console.error);
-  }, [selectedTermValue, chartGranularity]);
+    if (!selectedTerms.length) return;
+    loadChart(selectedTerms, chartGranularity).catch(console.error);
+  }, [selectedTerms, chartGranularity]);
 
   async function refreshTerms() {
     setTermsLoading(true);
@@ -108,11 +146,22 @@ export default function DocumentsPage() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setTerms(data);
-        if (
-          selectedTermId &&
-          !data.some((term: SearchTerm) => String(term.id) === String(selectedTermId))
-        ) {
-          setSelectedTermId("");
+        if (selectedTermId) {
+          if (selectedTermId.startsWith("category:")) {
+            const categoryName = selectedTermId.replace(/^category:/, "");
+            const hasCategoryTerms = data.some(
+              (term: SearchTerm) => (term.category ?? "") === categoryName
+            );
+            if (!hasCategoryTerms) {
+              setSelectedTermId("");
+            }
+          } else if (
+            !data.some(
+              (term: SearchTerm) => String(term.id) === String(selectedTermId)
+            )
+          ) {
+            setSelectedTermId("");
+          }
         }
       }
     } catch (e) {
@@ -125,6 +174,7 @@ export default function DocumentsPage() {
 
   async function createTerm() {
     const termValue = newTerm.trim();
+    const categoryValue = newCategory.trim() || null;
     if (!termValue) {
       setTermsError("Search term is required.");
       return;
@@ -136,7 +186,7 @@ export default function DocumentsPage() {
       const res = await fetch("/api/search-terms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term: termValue }),
+        body: JSON.stringify({ term: termValue, category: categoryValue }),
       });
       if (!res.ok) {
         setTermsError("Unable to create search term.");
@@ -146,6 +196,7 @@ export default function DocumentsPage() {
       const created = (await res.json()) as SearchTerm;
       setTerms((prev) => [created, ...prev]);
       setNewTerm("");
+      setNewCategory("");
     } catch (e) {
       console.error(e);
       setTermsError("Unable to create search term.");
@@ -157,15 +208,18 @@ export default function DocumentsPage() {
   function startEditing(term: SearchTerm) {
     setEditingId(String(term.id));
     setEditingTerm(term.term);
+    setEditingCategory(term.category ?? "");
   }
 
   function cancelEditing() {
     setEditingId(null);
     setEditingTerm("");
+    setEditingCategory("");
   }
 
   async function saveEditing(id: string) {
     const termValue = editingTerm.trim();
+    const categoryValue = editingCategory.trim() || null;
     if (!termValue) {
       setTermsError("Search term is required.");
       return;
@@ -177,7 +231,7 @@ export default function DocumentsPage() {
       const res = await fetch(`/api/search-terms/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term: termValue }),
+        body: JSON.stringify({ term: termValue, category: categoryValue }),
       });
 
       if (!res.ok) {
@@ -208,7 +262,19 @@ export default function DocumentsPage() {
         return;
       }
 
-      setTerms((prev) => prev.filter((term) => String(term.id) !== id));
+      setTerms((prev) => {
+        const updated = prev.filter((term) => String(term.id) !== id);
+        if (
+          selectedTermId.startsWith("category:") &&
+          !updated.some(
+            (term) =>
+              (term.category ?? "") === selectedTermId.replace(/^category:/, "")
+          )
+        ) {
+          setSelectedTermId("");
+        }
+        return updated;
+      });
       if (String(selectedTermId) === id) {
         setSelectedTermId("");
       }
@@ -220,7 +286,9 @@ export default function DocumentsPage() {
     }
   }
 
-  async function loadChart(term: string, granularity: ChartGranularity) {
+  async function loadChart(terms: string[], granularity: ChartGranularity) {
+    if (!terms.length) return;
+
     setLoadingChart(true);
     setError(null);
     setSelectedRange(null);
@@ -228,11 +296,10 @@ export default function DocumentsPage() {
     setBuckets([]);
 
     try {
-      const res = await fetch(
-        `/api/documents?term=${encodeURIComponent(
-          term
-        )}&granularity=${granularity}`
-      );
+      const params = new URLSearchParams({ granularity });
+      terms.forEach((term) => params.append("terms", term));
+
+      const res = await fetch(`/api/documents?${params.toString()}`);
       if (!res.ok) {
         setError("Could not fetch document trends");
         return;
@@ -282,7 +349,7 @@ export default function DocumentsPage() {
   }
 
   async function loadDocumentsForBucket(date: string, count: number) {
-    if (!selectedTermValue) return;
+    if (!selectedTerms.length) return;
 
     const range = getBucketRange(date, chartGranularity);
     setLoadingDocuments(true);
@@ -296,13 +363,14 @@ export default function DocumentsPage() {
     setDocuments([]);
 
     try {
-      const res = await fetch(
-        `/api/documents?term=${encodeURIComponent(
-          selectedTermValue
-        )}&startDate=${range.startDate}&endDate=${
-          range.endDate
-        }&granularity=${chartGranularity}`
-      );
+      const params = new URLSearchParams({
+        startDate: range.startDate,
+        endDate: range.endDate,
+        granularity: chartGranularity,
+      });
+      selectedTerms.forEach((term) => params.append("terms", term));
+
+      const res = await fetch(`/api/documents?${params.toString()}`);
 
       if (!res.ok) {
         setError("Could not fetch matching documents");
@@ -414,7 +482,8 @@ export default function DocumentsPage() {
 
         <KpiCards
           totalMentions={totalMentions}
-          selectedTerm={selectedTerm}
+          selectedLabel={selectedLabel}
+          hasSelection={hasSelection}
           monthTrend={monthTrend}
           granularityLabel={granularityLabel}
         />
@@ -446,12 +515,16 @@ export default function DocumentsPage() {
         termsLoading={termsLoading}
         termsError={termsError}
         newTerm={newTerm}
+        newCategory={newCategory}
         editingId={editingId}
         editingTerm={editingTerm}
+        editingCategory={editingCategory}
         savingTermId={savingTermId}
         deletingTermId={deletingTermId}
         onNewTermChange={setNewTerm}
+        onNewCategoryChange={setNewCategory}
         onEditingTermChange={setEditingTerm}
+        onEditingCategoryChange={setEditingCategory}
         onCreateTerm={createTerm}
         onStartEditing={startEditing}
         onCancelEditing={cancelEditing}

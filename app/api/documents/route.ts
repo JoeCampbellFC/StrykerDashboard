@@ -35,12 +35,25 @@ function normalizeDate(value: string | null) {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const term = (searchParams.get("term") ?? "").trim();
+  const allTerms = [
+    ...searchParams
+      .getAll("terms")
+      .flatMap((value) => value.split(","))
+      .map((value) => value.trim())
+      .filter(Boolean),
+  ];
+  const fallbackTerm = (searchParams.get("term") ?? "").trim();
+
+  if (fallbackTerm) {
+    allTerms.push(fallbackTerm);
+  }
+
+  const terms = Array.from(new Set(allTerms));
   const startDate = normalizeDate(searchParams.get("startDate"));
   const endDate = normalizeDate(searchParams.get("endDate"));
   const granularity = (searchParams.get("granularity") ?? "day").trim();
 
-  if (!term) {
+  if (!terms.length) {
     return NextResponse.json({ error: "term is required" }, { status: 400 });
   }
 
@@ -58,21 +71,21 @@ export async function GET(request: Request) {
     );
   }
 
-  const likeTerm = `%${term}%`;
+  const likeTerms = terms.map((value) => `%${value}%`);
   const intervalByGranularity: Record<string, string> = {
     day: "1 day",
     month: "1 month",
     year: "1 year",
   };
   const seriesInterval = intervalByGranularity[granularity];
-  console.log(likeTerm, startDate, endDate, granularity);
+  console.log(likeTerms, startDate, endDate, granularity);
   try {
     const bucketsResult = await pool.query<Bucket>(
       `
       WITH matched AS (
         SELECT document_date::date AS document_date
         FROM public.documents
-        WHERE text ILIKE $1
+        WHERE text ILIKE ANY($1::text[])
       ),
       bounds AS (
         SELECT
@@ -103,7 +116,7 @@ export async function GET(request: Request) {
       LEFT JOIN counts ON counts.bucket = series.bucket
       ORDER BY series.bucket
       `,
-      [likeTerm, granularity, seriesInterval]
+      [likeTerms, granularity, seriesInterval]
     );
 
     let documents: DocumentRow[] | null = null;
@@ -119,12 +132,12 @@ export async function GET(request: Request) {
           customer,
           file_link
         FROM public.documents
-        WHERE text ILIKE $1
+        WHERE text ILIKE ANY($1::text[])
           AND document_date::date >= $2::date
           AND document_date::date <= $3::date
         ORDER BY document_date::date ASC, id ASC
         `,
-        [likeTerm, startDate, endDate]
+        [likeTerms, startDate, endDate]
       );
 
       documents = docsResult.rows;

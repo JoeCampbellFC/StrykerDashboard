@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -22,6 +24,30 @@ export function DashboardHeader({
   onSelectTerm,
   onOpenManageTerms,
 }: DashboardHeaderProps) {
+  const grouped = terms.reduce(
+    (
+      acc: {
+        categories: Record<string, SearchTerm[]>;
+        uncategorized: SearchTerm[];
+      },
+      term
+    ) => {
+      const category = term.category?.trim();
+      if (category) {
+        acc.categories[category] = acc.categories[category] || [];
+        acc.categories[category].push(term);
+      } else {
+        acc.uncategorized.push(term);
+      }
+      return acc;
+    },
+    { categories: {}, uncategorized: [] as SearchTerm[] }
+  );
+
+  const sortedCategories = Object.keys(grouped.categories).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
   return (
     <header className="sticky top-0 z-40 w-full border-b-1 border-[#ffb500] bg-background">
       <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-6 py-3">
@@ -50,11 +76,30 @@ export function DashboardHeader({
               <SelectValue placeholder="Choose a search term" />
             </SelectTrigger>
             <SelectContent>
-              {terms.map((t) => (
-                <SelectItem key={t.id} value={String(t.id)}>
-                  {t.term}
-                </SelectItem>
+              {sortedCategories.map((category) => (
+                <SelectGroup key={category}>
+                  <SelectLabel>{category}</SelectLabel>
+                  <SelectItem value={`category:${category}`}>
+                    All {category}
+                  </SelectItem>
+                  {grouped.categories[category].map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.term}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
+
+              {grouped.uncategorized.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Other terms</SelectLabel>
+                  {grouped.uncategorized.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.term}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
             </SelectContent>
           </Select>
 
