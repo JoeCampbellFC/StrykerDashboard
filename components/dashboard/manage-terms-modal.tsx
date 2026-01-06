@@ -46,46 +46,48 @@ export function ManageTermsModal({
 }: ManageTermsModalProps) {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-4xl space-y-4 rounded-lg bg-background p-6 shadow-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Manage search terms</h2>
-            <p className="text-sm text-muted-foreground">
-              Add, edit, or remove the terms used to track document mentions.
-            </p>
-          </div>
-          <Button variant="ghost" onClick={onClose}>
-            Close
+ return (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="w-full max-w-4xl space-y-4 rounded-lg bg-background p-6 shadow-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">Manage search terms</h2>
+          <p className="text-sm text-muted-foreground">
+            Add, edit, or remove the terms used to track document mentions.
+          </p>
+        </div>
+        <Button variant="ghost" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+
+      {termsError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {termsError}
+        </div>
+      )}
+
+      <div className="space-y-3 rounded-lg border p-4">
+        <div className="text-sm font-medium">Add new term</div>
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <Input
+            placeholder="Search term"
+            value={newTerm}
+            onChange={(event) => onNewTermChange(event.target.value)}
+          />
+          <Button
+            onClick={onCreateTerm}
+            disabled={savingTermId === "new"}
+            className="md:w-[140px]"
+          >
+            {savingTermId === "new" ? "Saving..." : "Add term"}
           </Button>
         </div>
+      </div>
 
-        {termsError && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {termsError}
-          </div>
-        )}
-
-        <div className="space-y-3 rounded-lg border p-4">
-          <div className="text-sm font-medium">Add new term</div>
-          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-            <Input
-              placeholder="Search term"
-              value={newTerm}
-              onChange={(event) => onNewTermChange(event.target.value)}
-            />
-            <Button
-              onClick={onCreateTerm}
-              disabled={savingTermId === "new"}
-              className="md:w-[140px]"
-            >
-              {savingTermId === "new" ? "Saving..." : "Add term"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-lg border">
+      {/* ===== THIS AREA NOW SCROLLS ===== */}
+      <div className="overflow-hidden rounded-lg border">
+        <div className="max-h-[60vh] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -94,6 +96,7 @@ export function ManageTermsModal({
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {termsLoading ? (
                 <TableRow>
@@ -113,7 +116,9 @@ export function ManageTermsModal({
                         {isEditing ? (
                           <Input
                             value={editingTerm}
-                            onChange={(event) => onEditingTermChange(event.target.value)}
+                            onChange={(event) =>
+                              onEditingTermChange(event.target.value)
+                            }
                           />
                         ) : (
                           <div className="font-medium">{term.term}</div>
@@ -130,12 +135,19 @@ export function ManageTermsModal({
                             <>
                               <Button
                                 size="sm"
-                                onClick={() => onSaveEditing(String(term.id))}
+                                onClick={() =>
+                                  onSaveEditing(String(term.id))
+                                }
                                 disabled={isSaving}
                               >
                                 {isSaving ? "Saving..." : "Save"}
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={onCancelEditing}>
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={onCancelEditing}
+                              >
                                 Cancel
                               </Button>
                             </>
@@ -144,17 +156,24 @@ export function ManageTermsModal({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => onStartEditing(term)}
+                                onClick={() =>
+                                  onStartEditing(term)
+                                }
                               >
                                 Edit
                               </Button>
+
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => onDeleteTerm(String(term.id))}
+                                onClick={() =>
+                                  onDeleteTerm(String(term.id))
+                                }
                                 disabled={isDeleting}
                               >
-                                {isDeleting ? "Deleting..." : "Delete"}
+                                {isDeleting
+                                  ? "Deleting..."
+                                  : "Delete"}
                               </Button>
                             </>
                           )}
@@ -174,6 +193,10 @@ export function ManageTermsModal({
           </Table>
         </div>
       </div>
+      {/* ===== END SCROLLABLE AREA ===== */}
+
     </div>
-  );
+  </div>
+);
+
 }

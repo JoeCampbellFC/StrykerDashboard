@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     year: "1 year",
   };
   const seriesInterval = intervalByGranularity[granularity];
-
+  console.log(likeTerm, startDate, endDate, granularity);
   try {
     const bucketsResult = await pool.query<Bucket>(
       `
