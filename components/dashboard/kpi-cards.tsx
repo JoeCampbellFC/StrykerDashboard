@@ -7,18 +7,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MonthTrend } from "@/types/documents";
-import { SearchTerm } from "@/types/searchTerm";
 
 type KpiCardsProps = {
   totalMentions: number;
-  selectedTerm?: SearchTerm;
+  selectedLabel?: string;
+  hasSelection: boolean;
   monthTrend: MonthTrend | null;
   granularityLabel: string;
 };
 
 export function KpiCards({
   totalMentions,
-  selectedTerm,
+  selectedLabel,
+  hasSelection,
   monthTrend,
   granularityLabel,
 }: KpiCardsProps) {
@@ -38,11 +39,11 @@ export function KpiCards({
         <CardHeader className="pb-2">
           <CardDescription>Selected term</CardDescription>
           <CardTitle className="text-xl">
-            {selectedTerm ? selectedTerm.term : "—"}
+            {selectedLabel ? selectedLabel : "—"}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-xs text-muted-foreground">
-          {selectedTerm ? "Current selection." : "Choose a term to begin."}
+          {hasSelection ? "Current selection." : "Choose a term to begin."}
         </CardContent>
       </Card>
 
@@ -50,7 +51,7 @@ export function KpiCards({
         <CardHeader className="pb-2">
           <CardDescription>Trends</CardDescription>
           <CardTitle className="text-2xl">
-            {selectedTerm && monthTrend ? (
+            {hasSelection && monthTrend ? (
               <span className="flex items-center gap-2">
                 <span>
                   {monthTrend.percentChange === null
@@ -88,7 +89,7 @@ export function KpiCards({
         </CardHeader>
 
         <CardContent className="text-xs text-muted-foreground">
-          {selectedTerm && monthTrend
+          {hasSelection && monthTrend
             ? `Past 30 days: +${monthTrend.addedLast30} (was ${monthTrend.baseBefore30}; now ${monthTrend.totalCount}).`
             : `Number of ${granularityLabel}s that have at least one match.`}
         </CardContent>

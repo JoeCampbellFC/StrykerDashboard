@@ -9,12 +9,16 @@ type ManageTermsModalProps = {
   termsLoading: boolean;
   termsError: string | null;
   newTerm: string;
+  newCategory: string;
   editingId: string | null;
   editingTerm: string;
+  editingCategory: string;
   savingTermId: string | null;
   deletingTermId: string | null;
   onNewTermChange: (value: string) => void;
+  onNewCategoryChange: (value: string) => void;
   onEditingTermChange: (value: string) => void;
+  onEditingCategoryChange: (value: string) => void;
   onCreateTerm: () => void;
   onStartEditing: (term: SearchTerm) => void;
   onCancelEditing: () => void;
@@ -30,12 +34,16 @@ export function ManageTermsModal({
   termsLoading,
   termsError,
   newTerm,
+  newCategory,
   editingId,
   editingTerm,
+  editingCategory,
   savingTermId,
   deletingTermId,
   onNewTermChange,
+  onNewCategoryChange,
   onEditingTermChange,
+  onEditingCategoryChange,
   onCreateTerm,
   onStartEditing,
   onCancelEditing,
@@ -69,11 +77,16 @@ export function ManageTermsModal({
 
       <div className="space-y-3 rounded-lg border p-4">
         <div className="text-sm font-medium">Add new term</div>
-        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+        <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">
           <Input
             placeholder="Search term"
             value={newTerm}
             onChange={(event) => onNewTermChange(event.target.value)}
+          />
+          <Input
+            placeholder="Category (optional)"
+            value={newCategory}
+            onChange={(event) => onNewCategoryChange(event.target.value)}
           />
           <Button
             onClick={onCreateTerm}
@@ -92,6 +105,7 @@ export function ManageTermsModal({
             <TableHeader>
               <TableRow>
                 <TableHead>Term</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead className="whitespace-nowrap">Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -122,6 +136,22 @@ export function ManageTermsModal({
                           />
                         ) : (
                           <div className="font-medium">{term.term}</div>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                        {isEditing ? (
+                          <Input
+                            placeholder="Category (optional)"
+                            value={editingCategory}
+                            onChange={(event) =>
+                              onEditingCategoryChange(event.target.value)
+                            }
+                          />
+                        ) : term.category ? (
+                          term.category
+                        ) : (
+                          "—"
                         )}
                       </TableCell>
 
