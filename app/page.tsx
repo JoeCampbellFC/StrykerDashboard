@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DocumentsTable } from "@/components/dashboard/documents-table";
@@ -76,6 +76,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loadingChart, setLoadingChart] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [exportingDocuments, setExportingDocuments] = useState(false);
 
   const [selectedRange, setSelectedRange] = useState<SelectedRange>(null);
 
@@ -469,8 +470,9 @@ export default function DocumentsPage() {
   type ExportDocumentRow = Pick<DocumentRow, "id" | "title" | "document_date" | "file_link">;
 
   async function handleExport() {
-    if (!selectedTerms.length) return;
+    if (!selectedTerms.length || exportingDocuments) return;
 
+    setExportingDocuments(true);
     try {
       const params = new URLSearchParams({ export: "true" });
       selectedTerms.forEach((term) => params.append("terms", term));
@@ -521,6 +523,8 @@ export default function DocumentsPage() {
     } catch (e) {
       console.error(e);
       setError("Could not export matching documents");
+    } finally {
+      setExportingDocuments(false);
     }
   }
 
@@ -553,10 +557,15 @@ export default function DocumentsPage() {
             variant="outline"
             size="icon"
             onClick={handleExport}
-            disabled={!selectedTerms.length}
+            disabled={!selectedTerms.length || exportingDocuments}
             aria-label="Export matching documents"
+            aria-busy={exportingDocuments}
           >
-            <Download />
+            {exportingDocuments ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Download />
+            )}
           </Button>
         </div>
 
