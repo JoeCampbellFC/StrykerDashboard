@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -107,8 +108,14 @@ export function DashboardHeader({
             </SelectContent>
           </Select>
 
-          <Button variant="outline" onClick={onOpenManageTerms}>
-            Manage terms
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onOpenManageTerms}
+            aria-label="Manage terms"
+            title="Manage terms"
+          >
+            <Tags className="h-4 w-4" />
           </Button>
         </div>
       </div>
