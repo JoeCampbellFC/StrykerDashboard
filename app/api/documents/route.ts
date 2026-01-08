@@ -18,7 +18,7 @@ type DocumentRow = {
 type ExportDocumentRow = {
   id: number;
   title: string;
-  text: string;
+  document_date: string; // YYYY-MM-DD (date-only now)
   file_link: string;
 };
 
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
         ? `
           id,
           title,
-          text,
+          document_date::date::text AS document_date,
           file_link
         `
         : `
