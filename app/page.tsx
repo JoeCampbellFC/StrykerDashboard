@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Download } from "lucide-react";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DocumentsTable } from "@/components/dashboard/documents-table";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { ManageTermsModal } from "@/components/dashboard/manage-terms-modal";
 import { TrendChartCard } from "@/components/dashboard/trend-chart-card";
+import { Button } from "@/components/ui/button";
 import {
   ChartDataPoint,
   ChartGranularity,
@@ -464,6 +466,69 @@ export default function DocumentsPage() {
       ? "month"
       : "year";
 
+  async function handleExport() {
+    if (!selectedTerms.length) return;
+
+    try {
+      const params = new URLSearchParams({ includeDocuments: "true" });
+      selectedTerms.forEach((term) => params.append("terms", term));
+
+      const res = await fetch(`/api/documents?${params.toString()}`);
+      if (!res.ok) {
+        setError("Could not export matching documents");
+        return;
+      }
+
+      const data = (await res.json()) as { documents?: DocumentRow[] };
+      const rows = Array.isArray(data?.documents) ? data.documents : [];
+
+      if (!rows.length) {
+        setError("No matching documents to export");
+        return;
+      }
+
+      const headers = [
+        "id",
+        "title",
+        "text",
+        "document_date",
+        "customer",
+        "file_link",
+      ] as const;
+
+      const escapeValue = (value: string | number | null | undefined) => {
+        if (value === null || value === undefined) return "";
+        const str = String(value);
+        return str.includes('"') || str.includes(",") || str.includes("\n")
+          ? `"${str.replace(/"/g, '""')}"`
+          : str;
+      };
+
+      const lines = [
+        headers.join(","),
+        ...rows.map((row) =>
+          headers.map((key) => escapeValue(row[key])).join(",")
+        ),
+      ];
+
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const safeLabel = selectedLabel
+        ? selectedLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase()
+        : "documents";
+      anchor.href = url;
+      anchor.download = `${safeLabel}-matches.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      setError("Could not export matching documents");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <DashboardHeader
@@ -487,6 +552,18 @@ export default function DocumentsPage() {
           monthTrend={monthTrend}
           granularityLabel={granularityLabel}
         />
+
+        <div className="flex items-center justify-end">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleExport}
+            disabled={!selectedTerms.length}
+            aria-label="Export matching documents"
+          >
+            <Download />
+          </Button>
+        </div>
 
         <TrendChartCard
           chartData={chartData}

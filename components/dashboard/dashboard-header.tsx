@@ -79,11 +79,15 @@ export function DashboardHeader({
               {sortedCategories.map((category) => (
                 <SelectGroup key={category}>
                   <SelectLabel>{category}</SelectLabel>
-                  <SelectItem value={`category:${category}`}>
+                  <SelectItem value={`category:${category}`} className="pl-4 italic">
                     All {category}
                   </SelectItem>
                   {grouped.categories[category].map((t) => (
-                    <SelectItem key={t.id} value={String(t.id)}>
+                    <SelectItem
+                      key={t.id}
+                      value={String(t.id)}
+                      className="pl-6"
+                    >
                       {t.term}
                     </SelectItem>
                   ))}
@@ -94,7 +98,7 @@ export function DashboardHeader({
                 <SelectGroup>
                   <SelectLabel>Other terms</SelectLabel>
                   {grouped.uncategorized.map((t) => (
-                    <SelectItem key={t.id} value={String(t.id)}>
+                    <SelectItem key={t.id} value={String(t.id)} className="pl-4">
                       {t.term}
                     </SelectItem>
                   ))}

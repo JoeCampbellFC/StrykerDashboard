@@ -52,6 +52,7 @@ export async function GET(request: Request) {
   const startDate = normalizeDate(searchParams.get("startDate"));
   const endDate = normalizeDate(searchParams.get("endDate"));
   const granularity = (searchParams.get("granularity") ?? "day").trim();
+  const includeDocuments = searchParams.get("includeDocuments") === "true";
 
   if (!terms.length) {
     return NextResponse.json({ error: "term is required" }, { status: 400 });
@@ -121,7 +122,7 @@ export async function GET(request: Request) {
 
     let documents: DocumentRow[] | null = null;
 
-    if (startDate && endDate) {
+    if ((startDate && endDate) || includeDocuments) {
       const docsResult = await pool.query<DocumentRow>(
         `
         SELECT
@@ -133,8 +134,8 @@ export async function GET(request: Request) {
           file_link
         FROM public.documents
         WHERE text ILIKE ANY($1::text[])
-          AND document_date::date >= $2::date
-          AND document_date::date <= $3::date
+          AND ($2::date IS NULL OR document_date::date >= $2::date)
+          AND ($3::date IS NULL OR document_date::date <= $3::date)
         ORDER BY document_date::date ASC, id ASC
         `,
         [likeTerms, startDate, endDate]
