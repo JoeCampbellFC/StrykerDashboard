@@ -15,6 +15,13 @@ type DocumentRow = {
   file_link: string;
 };
 
+type ExportDocumentRow = {
+  id: number;
+  title: string;
+  text: string;
+  file_link: string;
+};
+
 function normalizeDate(value: string | null) {
   if (!value) return null;
 
@@ -52,7 +59,7 @@ export async function GET(request: Request) {
   const startDate = normalizeDate(searchParams.get("startDate"));
   const endDate = normalizeDate(searchParams.get("endDate"));
   const granularity = (searchParams.get("granularity") ?? "day").trim();
-  const includeDocuments = searchParams.get("includeDocuments") === "true";
+  const exportDocuments = searchParams.get("export") === "true";
 
   if (!terms.length) {
     return NextResponse.json({ error: "term is required" }, { status: 400 });
@@ -120,18 +127,28 @@ export async function GET(request: Request) {
       [likeTerms, granularity, seriesInterval]
     );
 
-    let documents: DocumentRow[] | null = null;
+    let documents: (DocumentRow | ExportDocumentRow)[] | null = null;
 
-    if ((startDate && endDate) || includeDocuments) {
-      const docsResult = await pool.query<DocumentRow>(
+    if ((startDate && endDate) || exportDocuments) {
+      const selectColumns = exportDocuments
+        ? `
+          id,
+          title,
+          text,
+          file_link
         `
-        SELECT
+        : `
           id,
           title,
           text,
           document_date::date::text AS document_date,
           customer,
           file_link
+        `;
+      const docsResult = await pool.query<DocumentRow | ExportDocumentRow>(
+        `
+        SELECT
+          ${selectColumns}
         FROM public.documents
         WHERE text ILIKE ANY($1::text[])
           AND ($2::date IS NULL OR document_date::date >= $2::date)

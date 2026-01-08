@@ -466,11 +466,13 @@ export default function DocumentsPage() {
       ? "month"
       : "year";
 
+  type ExportDocumentRow = Pick<DocumentRow, "id" | "title" | "text" | "file_link">;
+
   async function handleExport() {
     if (!selectedTerms.length) return;
 
     try {
-      const params = new URLSearchParams({ includeDocuments: "true" });
+      const params = new URLSearchParams({ export: "true" });
       selectedTerms.forEach((term) => params.append("terms", term));
 
       const res = await fetch(`/api/documents?${params.toString()}`);
@@ -479,7 +481,7 @@ export default function DocumentsPage() {
         return;
       }
 
-      const data = (await res.json()) as { documents?: DocumentRow[] };
+      const data = (await res.json()) as { documents?: ExportDocumentRow[] };
       const rows = Array.isArray(data?.documents) ? data.documents : [];
 
       if (!rows.length) {
@@ -487,14 +489,7 @@ export default function DocumentsPage() {
         return;
       }
 
-      const headers = [
-        "id",
-        "title",
-        "text",
-        "document_date",
-        "customer",
-        "file_link",
-      ] as const;
+      const headers = ["id", "title", "text", "file_link"] as const;
 
       const escapeValue = (value: string | number | null | undefined) => {
         if (value === null || value === undefined) return "";
