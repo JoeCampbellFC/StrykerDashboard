@@ -101,18 +101,7 @@ export function TrendChartCard({
               </ResponsiveContainer>
             </div>
 
-            {monthTrend && monthTrend.percentChange !== null && (
-              <div className="flex items-center gap-4 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-                <div className="font-medium text-foreground">Last 30 days</div>
-                <Separator orientation="vertical" className="h-4" />
-                <div className="flex items-center gap-1">
-                  {monthTrend.percentChange > 0 ? "+" : ""}
-                  {monthTrend.percentChange}% vs prior period
-                </div>
-                <Separator orientation="vertical" className="h-4" />
-                <div>{monthTrend.totalCount} total mentions</div>
-              </div>
-            )}
+
           </div>
         ) : (
           <div className="text-sm text-muted-foreground">
