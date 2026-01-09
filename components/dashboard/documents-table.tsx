@@ -15,6 +15,7 @@ type DocumentsTableProps = {
 };
 
 const DOCUMENTS_TO_SEARCH_MARKER = "documents to search";
+const SHAREPOINT_PREFIX = "https://stryker.sharepoint.com/";
 
 function formatCustomerLabel(folderPath: string) {
   const trimmed = folderPath.trim();
@@ -39,6 +40,16 @@ function renderCustomerPath(path: string) {
       <span>{segment}</span>
     </Fragment>
   ));
+}
+
+function formatSharePointLink(url: string) {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith(SHAREPOINT_PREFIX)) return trimmed;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+
+  const normalized = trimmed.replace(/^\/+/, "");
+  return `${SHAREPOINT_PREFIX}${normalized}`;
 }
 
 export function DocumentsTable({
@@ -142,7 +153,11 @@ export function DocumentsTable({
                       </TableCell>
                       <TableCell className="align-top">
                         <Button asChild variant="link" className="h-auto p-0">
-                          <a href={doc.file_link} target="_blank" rel="noreferrer">
+                          <a
+                            href={formatSharePointLink(doc.file_link)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
                             Open
                           </a>
                         </Button>
