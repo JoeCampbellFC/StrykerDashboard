@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentRow, SelectedRange } from "@/types/documents";
-import { CornerDownRight } from "lucide-react";
+import { CornerDownRight, Download, ExternalLink } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 type DocumentsTableProps = {
@@ -51,6 +51,24 @@ function formatSharePointLink(url: string) {
 
   const normalized = trimmed.replace(/^\/+/, "");
   return `${SHAREPOINT_PREFIX}${normalized}`;
+}
+
+function buildSharePointLink(url: string, options?: { openInWeb?: boolean }) {
+  const formatted = formatSharePointLink(url);
+  if (!options?.openInWeb) {
+    return formatted;
+  }
+
+  try {
+    const parsed = new URL(formatted);
+    if (!parsed.searchParams.has("web")) {
+      parsed.searchParams.set("web", "1");
+    }
+    return parsed.toString();
+  } catch {
+    const delimiter = formatted.includes("?") ? "&" : "?";
+    return formatted.includes("web=1") ? formatted : `${formatted}${delimiter}web=1`;
+  }
 }
 
 export function DocumentsTable({
@@ -196,15 +214,28 @@ export function DocumentsTable({
                         {renderCustomerPath(doc.folder_path)}
                       </TableCell>
                       <TableCell className="align-top">
-                        <Button asChild variant="link" className="h-auto p-0">
-                          <a
-                            href={formatSharePointLink(doc.file_link)}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Open
-                          </a>
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button asChild variant="ghost" size="icon">
+                            <a
+                              href={buildSharePointLink(doc.file_link, { openInWeb: true })}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label="Open in SharePoint"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button asChild variant="ghost" size="icon">
+                            <a
+                              href={buildSharePointLink(doc.file_link)}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label="Download file"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
