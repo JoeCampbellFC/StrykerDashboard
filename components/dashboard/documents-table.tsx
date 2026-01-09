@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentRow, SelectedRange } from "@/types/documents";
 import { CornerDownRight } from "lucide-react";
@@ -103,14 +104,57 @@ export function DocumentsTable({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <Input
-          placeholder="Search documents"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          disabled={!documents.length}
-        />
+        {documents.length > 0 && (
+          <Input
+            placeholder="Search documents"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        )}
         {loadingDocuments && (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <div className="space-y-3">
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
+                    <TableHead>Folder</TableHead>
+                    <TableHead>File</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={`skeleton-${index}`}>
+                      <TableCell className="align-top">
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-3/5" />
+                          <Skeleton className="h-3 w-full" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap align-top">
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Skeleton className="h-4 w-16" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+              <Skeleton className="h-4 w-40" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-16" />
+              </div>
+            </div>
+          </div>
         )}
         {selectedRange && !documents.length && !loadingDocuments && (
           <p className="text-sm text-muted-foreground">
