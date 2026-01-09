@@ -129,7 +129,7 @@ export function DocumentsTable({
                   <TableRow>
                     <TableHead>Title</TableHead>
                     <TableHead className="whitespace-nowrap">Date</TableHead>
-                    <TableHead>Customer</TableHead>
+                    <TableHead>Folder</TableHead>
                     <TableHead>File</TableHead>
                   </TableRow>
                 </TableHeader>
