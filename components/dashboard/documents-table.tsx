@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentRow, SelectedRange } from "@/types/documents";
-import { useEffect, useMemo, useState } from "react";
+import { CornerDownRight } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 type DocumentsTableProps = {
   selectedRange: SelectedRange;
@@ -12,6 +13,33 @@ type DocumentsTableProps = {
   granularityLabel: string;
   formatDate: (value: string) => string;
 };
+
+const DOCUMENTS_TO_SEARCH_MARKER = "documents to search";
+
+function formatCustomerLabel(folderPath: string) {
+  const trimmed = folderPath.trim();
+  if (!trimmed) return trimmed;
+
+  const lower = trimmed.toLowerCase();
+  const markerIndex = lower.indexOf(DOCUMENTS_TO_SEARCH_MARKER);
+  if (markerIndex === -1) return trimmed;
+
+  const afterMarker = trimmed.slice(markerIndex + DOCUMENTS_TO_SEARCH_MARKER.length);
+  return afterMarker.replace(/^\/+/, "");
+}
+
+function renderCustomerPath(path: string) {
+  const label = formatCustomerLabel(path);
+  const segments = label.split("/").filter(Boolean);
+  if (!segments.length) return label;
+
+  return segments.map((segment, index) => (
+    <Fragment key={`${segment}-${index}`}>
+      {index > 0 && <CornerDownRight className="mx-1 inline-block h-3.5 w-3.5 text-muted-foreground" />}
+      <span>{segment}</span>
+    </Fragment>
+  ));
+}
 
 export function DocumentsTable({
   selectedRange,
@@ -31,7 +59,8 @@ export function DocumentsTable({
     }
 
     return documents.filter((doc) => {
-      const haystack = [doc.title, doc.text, doc.customer].join(" ").toLowerCase();
+      const customerLabel = formatCustomerLabel(doc.folder_path);
+      const haystack = [doc.title, doc.text, customerLabel].join(" ").toLowerCase();
       return haystack.includes(query);
     });
   }, [documents, searchQuery]);
@@ -108,7 +137,9 @@ export function DocumentsTable({
                       <TableCell className="whitespace-nowrap align-top">
                         {formatDate(doc.document_date)}
                       </TableCell>
-                      <TableCell className="align-top">{doc.customer}</TableCell>
+                      <TableCell className="align-top">
+                        {renderCustomerPath(doc.folder_path)}
+                      </TableCell>
                       <TableCell className="align-top">
                         <Button asChild variant="link" className="h-auto p-0">
                           <a href={doc.file_link} target="_blank" rel="noreferrer">

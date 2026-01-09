@@ -10,7 +10,7 @@ export type DocumentRow = {
   title: string;
   text: string;
   document_date: string;
-  customer: string;
+  folder_path: string;
   file_link: string;
 };
 

@@ -11,7 +11,7 @@ type DocumentRow = {
   title: string;
   text: string;
   document_date: string; // YYYY-MM-DD (date-only now)
-  customer: string;
+  folder_path: string;
   file_link: string;
 };
 
@@ -142,7 +142,7 @@ export async function GET(request: Request) {
           title,
           text,
           document_date::date::text AS document_date,
-          customer,
+          folder_path,
           file_link
         `;
       const docsResult = await pool.query<DocumentRow | ExportDocumentRow>(
