@@ -93,7 +93,7 @@ export async function GET(request: Request) {
       WITH matched AS (
         SELECT document_date::date AS document_date
         FROM public.documents
-        WHERE text ILIKE ANY($1::text[])
+        WHERE (text ILIKE ANY($1::text[]) OR title ILIKE ANY($1::text[]))
       ),
       bounds AS (
         SELECT
@@ -150,7 +150,7 @@ export async function GET(request: Request) {
         SELECT
           ${selectColumns}
         FROM public.documents
-        WHERE text ILIKE ANY($1::text[])
+        WHERE (text ILIKE ANY($1::text[]) OR title ILIKE ANY($1::text[]))
           AND ($2::date IS NULL OR document_date::date >= $2::date)
           AND ($3::date IS NULL OR document_date::date <= $3::date)
         ORDER BY document_date::date ASC, id ASC
