@@ -20,6 +20,7 @@ type ExportDocumentRow = {
   title: string;
   document_date: string; // YYYY-MM-DD (date-only now)
   file_link: string;
+  [term: string]: string | number;
 };
 
 function normalizeDate(value: string | null) {
@@ -130,12 +131,34 @@ export async function GET(request: Request) {
     let documents: (DocumentRow | ExportDocumentRow)[] | null = null;
 
     if ((startDate && endDate) || exportDocuments) {
+      const termColumns = exportDocuments
+        ? terms.map((term, index) => {
+            const paramIndex = index + 4;
+            const alias = term.replace(/"/g, '""');
+            return `
+              (
+                COALESCE(
+                  (length(lower(coalesce(text, ''))) - length(replace(lower(coalesce(text, '')), $${paramIndex}, '')))
+                  / nullif(length($${paramIndex}), 0),
+                  0
+                )
+                +
+                COALESCE(
+                  (length(lower(coalesce(title, ''))) - length(replace(lower(coalesce(title, '')), $${paramIndex}, '')))
+                  / nullif(length($${paramIndex}), 0),
+                  0
+                )
+              )::int AS "${alias}"
+            `;
+          })
+        : [];
       const selectColumns = exportDocuments
         ? `
           id,
           title,
           document_date::date::text AS document_date,
           file_link
+          ${termColumns.length ? `, ${termColumns.join(",")}` : ""}
         `
         : `
           id,
@@ -155,7 +178,9 @@ export async function GET(request: Request) {
           AND ($3::date IS NULL OR document_date::date <= $3::date)
         ORDER BY document_date::date ASC, id ASC
         `,
-        [likeTerms, startDate, endDate]
+        exportDocuments
+          ? [likeTerms, startDate, endDate, ...terms.map((term) => term.toLowerCase())]
+          : [likeTerms, startDate, endDate]
       );
 
       documents = docsResult.rows;
