@@ -467,7 +467,11 @@ export default function DocumentsPage() {
       ? "month"
       : "year";
 
-  type ExportDocumentRow = Pick<DocumentRow, "id" | "title" | "document_date" | "file_link">;
+  type ExportDocumentRow = Pick<
+    DocumentRow,
+    "id" | "title" | "document_date" | "file_link"
+  > &
+    Record<string, number | string | null>;
 
   async function handleExport() {
     if (!selectedTerms.length || exportingDocuments) return;
@@ -491,7 +495,13 @@ export default function DocumentsPage() {
         return;
       }
 
-      const headers = ["id", "title", "document_date", "file_link"] as const;
+      const headers = [
+        "id",
+        "title",
+        "document_date",
+        "file_link",
+        ...selectedTerms,
+      ];
 
       const escapeValue = (value: string | number | null | undefined) => {
         if (value === null || value === undefined) return "";
