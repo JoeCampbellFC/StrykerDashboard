@@ -138,13 +138,13 @@ export async function GET(request: Request) {
             return `
               (
                 COALESCE(
-                  (length(lower(coalesce(text, ''))) - length(replace(lower(coalesce(text, '')), $${paramIndex}, '')))
+                  (length(lower(coalesce(text, ''))) + length(replace(lower(coalesce(text, '')), $${paramIndex}, '')))
                   / nullif(length($${paramIndex}), 0),
                   0
                 )
                 +
                 COALESCE(
-                  (length(lower(coalesce(title, ''))) - length(replace(lower(coalesce(title, '')), $${paramIndex}, '')))
+                  (length(lower(coalesce(title, ''))) + length(replace(lower(coalesce(title, '')), $${paramIndex}, '')))
                   / nullif(length($${paramIndex}), 0),
                   0
                 )
